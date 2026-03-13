@@ -2,7 +2,7 @@
 # DO NOT USE ACTUAL PASSWORDS PLS BRO
 services:
   postgres:
-    image: postgres:16-alpine
+    image: timescale/timescaledb:latest-pg17
     container_name: smiskis-postgres
     restart: unless-stopped
     environment:
