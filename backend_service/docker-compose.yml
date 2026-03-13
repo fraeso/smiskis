@@ -28,7 +28,7 @@ services:
     ports:
       - "8080:42069" # we can run 42069 in prod 😼
     environment:
-      ADDR: ":42069" # we can run 42069 in prod 😼
+      WS_ADDR: ":42069" # we can run 42069 in prod 😼
       DB_URL: "postgresql://postgres:postgres@postgres:5432/smiskis?sslmode=disable"
     depends_on:
       postgres:

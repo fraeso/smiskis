@@ -1,34 +1,30 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"time"
 
 	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
-	addr, dsn := getEnvs()
-	println(addr)
+	// get envs
+	wsAddr, dsn := getEnvs()
+	println(wsAddr)
 	println(dsn)
 
-	http.HandleFunc("/health", greet)
-	http.ListenAndServe(addr, nil)
-}
-
-func greet(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello World! %s", time.Now())
+	// TODO: try to connect to db with pooling
+	// TODO: try to migrate db based on migration files
+	// TODO: run goroutine to continuously simulate/generate and write to db
+	// TODO: start ws server
 }
 
 // TODO: maybe check empty env values lol
-func getEnvs() (addr, dsn string) {
-	addr = os.Getenv("ADDR")
+func getEnvs() (wsAddr, dsn string) {
+	wsAddr = os.Getenv("WS_ADDR")
 	dsn = os.Getenv("DB_URL")
 
-	log.Println("ADDR=", addr)
+	log.Println("WS_ADDR=", wsAddr)
 	log.Println("DB_URL=", dsn)
 
 	return
