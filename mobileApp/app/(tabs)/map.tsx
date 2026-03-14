@@ -22,7 +22,7 @@ const KM_LAT = 1 / 110.574;
 
 const organicPolygon = (lat: number, lng: number, km: number, id: string, pts = 32): number[][] => {
   const latKm = KM_LAT;
-  const lngKm = 1 / (111.32 * Math.cos((lat * Math.PI) / 180)); // use actual lat for accuracy
+  const lngKm = 1 / (111.32 * Math.cos((lat * Math.PI) / 180));
   const seed = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const rng = (i: number) => { const x = Math.sin(seed * 9301 + i * 49297) * 233280; return x - Math.floor(x); };
   const coords = Array.from({ length: pts }, (_, i) => {
@@ -196,52 +196,8 @@ export default function MapScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
-
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Risk Map</Text>
-          <Text style={styles.subtitle}>{loading ? 'Loading sensors...' : `${sensors.length} sensors across Australia`}</Text>
-        </View>
-        <View style={styles.segmented}>
-          <TouchableOpacity
-            style={[styles.segBtn, showHeat ? styles.segBtnActive : undefined]}
-            onPress={() => setShowHeat(!showHeat)}
-          >
-            <Ionicons name="flame" size={13} color={showHeat ? colors.accent : colors.textMuted} />
-            <Text style={[styles.segText, showHeat ? styles.segTextActive : undefined]}>Heat</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.segBtn, showZones ? styles.segBtnActive : undefined]}
-            onPress={() => setShowZones(!showZones)}
-          >
-            <Ionicons name="radio" size={13} color={showZones ? colors.accent : colors.textMuted} />
-            <Text style={[styles.segText, showZones ? styles.segTextActive : undefined]}>Zones</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Dot colour filter */}
-      <View style={styles.colorFilterRow}>
-        {([
-          { mode: 'risk' as DotColorMode, label: 'Risk' },
-          { mode: 'temperature' as DotColorMode, label: 'Temp' },
-          { mode: 'humidity' as DotColorMode, label: 'Humidity' },
-          { mode: 'voc' as DotColorMode, label: 'VOC' },
-          { mode: 'aqi' as DotColorMode, label: 'AQI' },
-        ]).map((item) => (
-          <TouchableOpacity
-            key={item.mode}
-            style={[styles.colorFilterBtn, dotColorMode === item.mode ? styles.colorFilterBtnActive : undefined]}
-            onPress={() => setDotColorMode(item.mode)}
-          >
-            <Text style={[styles.colorFilterText, dotColorMode === item.mode ? styles.colorFilterTextActive : undefined]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+    <SafeAreaView style={styles.safe} edges={[]}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       <View style={styles.mapContainer}>
         <MapboxGL.MapView
@@ -357,24 +313,40 @@ export default function MapScreen() {
               }}
             />
           </MapboxGL.ShapeSource>
-
-
         </MapboxGL.MapView>
 
-        {/* Legend */}
+        {/* ── TOP CONTROLS OVERLAY — colour filter pills only ── */}
+        <View style={styles.topControls}>
+          <View style={styles.colorFilterRow}>
+            {([
+              { mode: 'risk' as DotColorMode, label: 'Risk' },
+              { mode: 'temperature' as DotColorMode, label: 'Temp' },
+              { mode: 'humidity' as DotColorMode, label: 'Humidity' },
+              { mode: 'voc' as DotColorMode, label: 'VOC' },
+              { mode: 'aqi' as DotColorMode, label: 'AQI' },
+            ]).map((item) => (
+              <TouchableOpacity
+                key={item.mode}
+                style={[styles.colorFilterBtn, dotColorMode === item.mode ? styles.colorFilterBtnActive : undefined]}
+                onPress={() => setDotColorMode(item.mode)}
+              >
+                <Text style={[styles.colorFilterText, dotColorMode === item.mode ? styles.colorFilterTextActive : undefined]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* ── BOTTOM LEFT — Risk legend ── */}
         <View style={styles.legend}>
           <Text style={styles.legendTitle}>{dotColorMode === 'risk' ? 'RISK LEVEL' : dotColorMode.toUpperCase()}</Text>
-          {(dotColorMode === 'risk' ? [
+          {[
             { label: 'Critical', color: colors.critical },
             { label: 'High', color: colors.high },
             { label: 'Moderate', color: colors.moderate },
             { label: 'Low', color: colors.low },
-          ] : [
-            { label: 'Critical', color: colors.critical },
-            { label: 'High', color: colors.high },
-            { label: 'Moderate', color: colors.moderate },
-            { label: 'Low', color: colors.low },
-          ]).map((item) => (
+          ].map((item) => (
             <View key={item.label} style={styles.legendRow}>
               <View style={[styles.legendDot, { backgroundColor: item.color }]} />
               <Text style={[styles.legendLabel, { color: item.color }]}>{item.label}</Text>
@@ -382,10 +354,30 @@ export default function MapScreen() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.sensorPill} onPress={resetCamera}>
-          <Ionicons name="locate" size={12} color={colors.textSecondary} />
-          <Text style={styles.sensorPillText}>{sensors.length} Sensors Active</Text>
-        </TouchableOpacity>
+        {/* ── BOTTOM RIGHT — Heat/Zones toggles + Sensor pill ── */}
+        <View style={styles.bottomRight}>
+          <View style={styles.segmented}>
+            <TouchableOpacity
+              style={[styles.segBtn, showHeat ? styles.segBtnActive : undefined]}
+              onPress={() => setShowHeat(!showHeat)}
+            >
+              <Ionicons name="flame" size={13} color={showHeat ? colors.accent : colors.textMuted} />
+              <Text style={[styles.segText, showHeat ? styles.segTextActive : undefined]}>Heat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segBtn, showZones ? styles.segBtnActive : undefined]}
+              onPress={() => setShowZones(!showZones)}
+            >
+              <Ionicons name="radio" size={13} color={showZones ? colors.accent : colors.textMuted} />
+              <Text style={[styles.segText, showZones ? styles.segTextActive : undefined]}>Zones</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.sensorPill} onPress={resetCamera}>
+            <Ionicons name="locate" size={12} color={colors.textSecondary} />
+            <Text style={styles.sensorPillText}>{sensors.length} Sensors Active</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Loading overlay — first load only */}
         {loading && (
@@ -439,29 +431,80 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { color: colors.textPrimary, fontSize: font.xxxl, fontWeight: '800', letterSpacing: -0.5 },
-  subtitle: { color: colors.textMuted, fontSize: font.sm, marginTop: 2 },
-  segmented: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  segBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  segBtnActive: { backgroundColor: colors.bgCardAlt },
-  segText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '600' },
-  segTextActive: { color: colors.accent },
-  colorFilterRow: { flexDirection: 'row', paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: spacing.sm },
-  colorFilterBtn: { paddingHorizontal: spacing.md, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard },
-  colorFilterBtnActive: { borderColor: colors.accent, backgroundColor: colors.bgCardAlt },
-  colorFilterText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '500' },
-  colorFilterTextActive: { color: colors.accent, fontWeight: '700' },
   mapContainer: { flex: 1, position: 'relative' },
   map: { flex: 1 },
-  legend: { position: 'absolute', top: spacing.lg, right: spacing.lg, backgroundColor: 'rgba(17,20,24,0.93)', borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: spacing.sm },
+
+  // ── Top: colour filter pills only ──
+  topControls: {
+    position: 'absolute',
+    top: 56,
+    left: spacing.lg,
+    right: spacing.lg,
+  },
+  colorFilterRow: { flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' },
+  colorFilterBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(17,20,24,0.93)',
+  },
+  colorFilterBtnActive: { borderColor: colors.accent, backgroundColor: 'rgba(17,20,24,0.97)' },
+  colorFilterText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '500' },
+  colorFilterTextActive: { color: colors.accent, fontWeight: '700' },
+
+  // ── Bottom left: legend ──
+  legend: {
+    position: 'absolute',
+    bottom: 30,
+    left: spacing.lg,
+    backgroundColor: 'rgba(17,20,24,0.93)',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
   legendTitle: { color: colors.textMuted, fontSize: font.xs, fontWeight: '700', letterSpacing: 0.8, marginBottom: 2 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendLabel: { fontSize: font.sm, fontWeight: '500' },
-  sensorPill: { position: 'absolute', bottom: spacing.xl, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: 'rgba(17,20,24,0.93)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+
+  // ── Bottom right: toggles + sensor pill ──
+  bottomRight: {
+    position: 'absolute',
+    bottom: 30,
+    right: spacing.lg,
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+  },
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(17,20,24,0.93)',
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  segBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  segBtnActive: { backgroundColor: colors.bgCardAlt },
+  segText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '600' },
+  segTextActive: { color: colors.accent },
+  sensorPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(17,20,24,0.93)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
   sensorPillText: { color: colors.textSecondary, fontSize: font.sm, fontWeight: '600' },
-  pin: { width: 24, height: 24, borderRadius: 12, borderWidth: 3 },
+
+  // ── Loading & callout ──
   loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,12,15,0.6)' },
   loadingCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl, alignItems: 'center', gap: spacing.md },
   loadingText: { color: colors.textSecondary, fontSize: font.md, fontWeight: '600' },
