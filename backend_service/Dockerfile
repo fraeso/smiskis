@@ -12,18 +12,18 @@ RUN go mod download
 COPY . .
 
 # Build the Go application, making it statically linked (CGO_ENABLED=0)
-# and placing the binary in /app/server
-RUN CGO_ENABLED=0 go build -v -o /app/server ./cmd/api
+# and placing the binary in /app/bin/api
+RUN CGO_ENABLED=0 go build -v -o /app/bin/api ./cmd/api
 
 # Stage 2: Create a minimal runtime image
 # Use the "scratch" base image for the absolute smallest possible image
 FROM scratch
 
 # Copy the compiled binary from the 'builder' stage
-COPY --from=builder /app/server /server
+COPY --from=builder /app/bin/api /api
 
 # Copy migration files
 COPY --from=builder /app/migrations /migrations
 
 # Command to run the executable when the container starts
-ENTRYPOINT ["/server"]
+ENTRYPOINT ["/api"]

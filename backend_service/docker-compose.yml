@@ -26,9 +26,11 @@ services:
     container_name: smiskis-backend
     restart: unless-stopped
     ports:
-      - "8080:42069" # we can run 42069 in prod 😼
+      - "8080:8080" # HTTP API
+      - "8081:8081" # WebSocket (future)
     environment:
-      WS_ADDR: ":42069" # we can run 42069 in prod 😼
+      HTTP_ADDR: ":8080"
+      WS_ADDR: ":8081"
       DB_URL: "postgresql://postgres:postgres@postgres:5432/smiskis?sslmode=disable"
     depends_on:
       postgres:

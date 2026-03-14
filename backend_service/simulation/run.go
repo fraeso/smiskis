@@ -77,7 +77,7 @@ func Run(conn *sql.DB) {
 	}
 	log.Printf("Successfully inserted %d sensors", len(sensors))
 
-	// initialize sensor state map to track last readings
+	// initialise sensor state map to track last readings
 	sensorStates := make(map[string]*SensorReading)
 
 	// backfill sensor reading data for the last month
@@ -352,27 +352,33 @@ func generateReading(sensorID string, timestamp time.Time, prevReading *SensorRe
 
 	if prevReading == nil {
 		// First reading for this sensor - generate initial state
-		// Start most sensors in low risk state (80% chance)
+		// More varied starting distribution: 65% low, 20% moderate, 10% high, 5% critical
 		randScenario := rand.Float64()
 
-		if randScenario < 0.80 {
+		if randScenario < 0.65 {
 			// Start in low risk
-			temperature = 14.0 + rand.Float64()*6  // 14-20°C
-			humidity = 60.0 + rand.Float64()*30    // 60-90%
-			vocLevel = 30 + rand.Intn(60)          // 30-90 ppb
-			aqi = 15 + rand.Intn(30)               // 15-45
-		} else if randScenario < 0.95 {
+			temperature = 14.0 + rand.Float64()*6 // 14-20°C
+			humidity = 60.0 + rand.Float64()*30   // 60-90%
+			vocLevel = 30 + rand.Intn(60)         // 30-90 ppb
+			aqi = 15 + rand.Intn(30)              // 15-45
+		} else if randScenario < 0.85 {
 			// Start in moderate risk
-			temperature = 22.0 + rand.Float64()*6  // 22-28°C
-			humidity = 35.0 + rand.Float64()*15    // 35-50%
-			vocLevel = 150 + rand.Intn(120)        // 150-270 ppb
-			aqi = 55 + rand.Intn(35)               // 55-90
-		} else {
+			temperature = 22.0 + rand.Float64()*6 // 22-28°C
+			humidity = 35.0 + rand.Float64()*15   // 35-50%
+			vocLevel = 150 + rand.Intn(120)       // 150-270 ppb
+			aqi = 55 + rand.Intn(35)              // 55-90
+		} else if randScenario < 0.95 {
 			// Start in high risk
-			temperature = 30.0 + rand.Float64()*5  // 30-35°C
-			humidity = 20.0 + rand.Float64()*10    // 20-30%
-			vocLevel = 600 + rand.Intn(300)        // 600-900 ppb
-			aqi = 110 + rand.Intn(40)              // 110-150
+			temperature = 30.0 + rand.Float64()*6 // 30-36°C
+			humidity = 20.0 + rand.Float64()*12   // 20-32%
+			vocLevel = 600 + rand.Intn(400)       // 600-1000 ppb
+			aqi = 110 + rand.Intn(50)             // 110-160
+		} else {
+			// Start in critical risk (fires already burning)
+			temperature = 35.0 + rand.Float64()*8 // 35-43°C
+			humidity = 12.0 + rand.Float64()*10   // 12-22%
+			vocLevel = 1200 + rand.Intn(1200)     // 1200-2400 ppb
+			aqi = 180 + rand.Intn(100)            // 180-280
 		}
 	} else {
 		// Evolve from previous reading with small changes
@@ -401,32 +407,65 @@ func generateReading(sensorID string, timestamp time.Time, prevReading *SensorRe
 		humidity = math.Max(10.0, math.Min(98.0, humidity)) // Clamp 10-98%
 
 		// VOC: Can change more dramatically (smoke can appear quickly)
-		// 70% small change, 20% medium change, 10% large change (fire starting)
+		// 55% small change, 20% medium change, 25% large change/fire events
 		vocChange := 0
 		vocRand := rand.Float64()
 
-		if vocRand < 0.70 {
-			// Small change: ±5-20 ppb
-			vocChange = rand.Intn(40) - 20
-		} else if vocRand < 0.90 {
-			// Medium change: ±20-100 ppb
-			vocChange = rand.Intn(200) - 100
+		if vocRand < 0.55 {
+			// Small change: ±5-30 ppb (normal drift)
+			vocChange = rand.Intn(60) - 30
+		} else if vocRand < 0.75 {
+			// Medium change: ±50-200 ppb (smoke drifting in/out)
+			vocChange = rand.Intn(400) - 200
 		} else {
-			// Large change: fire starting or clearing
-			if vocLevel < 500 {
-				// Fire starting - big increase
-				vocChange = 300 + rand.Intn(700)
+			// Large change: fire events (25% chance)
+			if vocLevel < 1200 {
+				// Fire starting or intensifying - dramatic increase
+				vocChange = 800 + rand.Intn(1700) // +800 to +2500 ppb (more intense)
+
+				// Also spike temperature during fire events
+				temperature += 8.0 + rand.Float64()*12.0 // +8 to +20°C (hotter)
+				temperature = math.Min(48.0, temperature)
+
+				// Drop humidity during fire
+				humidity -= 15.0 + rand.Float64()*25.0 // -15 to -40% (drier)
+				humidity = math.Max(10.0, humidity)
+			} else if vocLevel > 2000 {
+				// Only clear if VOC is very high (fire sustained longer)
+				vocChange = -(200 + rand.Intn(400)) // -200 to -600 ppb (slower clearing)
+
+				// Temperature and humidity recover very slowly
+				temperature -= 1.0 + rand.Float64()*2.0
+				temperature = math.Max(8.0, temperature)
+
+				humidity += 2.0 + rand.Float64()*8.0
+				humidity = math.Min(98.0, humidity)
 			} else {
-				// Fire clearing - big decrease
-				vocChange = -(200 + rand.Intn(400))
+				// Medium VOC (1200-2000): fire persists but can naturally extinguish
+				// 90% sustain, 10% start clearing (rain, wind change, firefighters)
+				// Average fire duration: ~50 minutes, some last hours
+				if rand.Float64() < 0.90 {
+					// Fire persists with small fluctuations
+					vocChange = rand.Intn(400) - 200 // ±200 ppb
+				} else {
+					// Natural extinguishing - significant drop
+					vocChange = -(400 + rand.Intn(600)) // -400 to -1000 ppb
+
+					// Conditions improve (rain, wind change)
+					temperature -= 3.0 + rand.Float64()*5.0
+					temperature = math.Max(8.0, temperature)
+
+					humidity += 10.0 + rand.Float64()*20.0
+					humidity = math.Min(98.0, humidity)
+				}
 			}
 		}
 
 		vocLevel += vocChange
 		vocLevel = int(math.Max(15.0, math.Min(3500.0, float64(vocLevel)))) // Clamp 15-3500 ppb
 
-		// AQI: follows VOC with some lag
-		aqiChange := vocChange / 10
+		// AQI: follows VOC more closely
+		aqiChange := vocChange / 8 // More responsive to VOC changes
 		aqi += aqiChange
 		aqi = int(math.Max(5.0, math.Min(400.0, float64(aqi)))) // Clamp 5-400
 	}
@@ -434,29 +473,29 @@ func generateReading(sensorID string, timestamp time.Time, prevReading *SensorRe
 	// Fire risk calculation based on NIH research formula
 	// Fire Risk = W1·Temp + W2·(100-Humid) + W3·VOC + W4·AQI
 
-	// Normalize values to 0-100 scale
-	normalizedTemp := math.Min(100.0, math.Max(0.0, (temperature-10.0)*2.0))
-	normalizedHumidity := 100.0 - humidity
-	normalizedVOC := math.Min(100.0, float64(vocLevel)/30.0)
-	normalizedAQI := math.Min(100.0, float64(aqi)/3.0)
+	// Normalise values to 0-100 scale
+	normalisedTemp := math.Min(100.0, math.Max(0.0, (temperature-10.0)*2.0))
+	normalisedHumidity := 100.0 - humidity
+	normalisedVOC := math.Min(100.0, float64(vocLevel)/30.0)
+	normalisedAQI := math.Min(100.0, float64(aqi)/3.0)
 
 	// Weighted fire risk score (0-100)
 	// Weights: Temp 30%, Humidity 25%, VOC 30%, AQI 15%
-	fireRiskScore := (0.30 * normalizedTemp) +
-	                 (0.25 * normalizedHumidity) +
-	                 (0.30 * normalizedVOC) +
-	                 (0.15 * normalizedAQI)
+	fireRiskScore := (0.30 * normalisedTemp) +
+		(0.25 * normalisedHumidity) +
+		(0.30 * normalisedVOC) +
+		(0.15 * normalisedAQI)
 
 	fireRiskScore = math.Min(100.0, fireRiskScore)
 
 	// Determine risk level from calculated fire risk score
 	var riskLevel string
 	switch {
-	case fireRiskScore >= 70:
+	case fireRiskScore >= 65:
 		riskLevel = "critical"
-	case fireRiskScore >= 55:
+	case fireRiskScore >= 50:
 		riskLevel = "high"
-	case fireRiskScore >= 40:
+	case fireRiskScore >= 35:
 		riskLevel = "moderate"
 	default:
 		riskLevel = "low"
