@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import MapboxGL from '@rnmapbox/maps';
-import { MAPBOX_ACCESS_TOKEN } from '@env';
 import { LineChart } from 'react-native-gifted-charts';
 import AlertBanner from '../../components/alert-banner';
 import NetworkOverview from '../../components/network-overview';
@@ -12,6 +11,7 @@ import StatCard from '../../components/stat-card';
 import { activeAlert, networkStats, environmentalStats, sensors, Alert } from '../../constants/dummy-data';
 import { colors, spacing, radius, font } from '../../constants/theme';
 
+const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
 const { width } = Dimensions.get('window');

@@ -3,12 +3,11 @@ import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-// @ts-ignore
 import MapboxGL from '@rnmapbox/maps';
-import { MAPBOX_ACCESS_TOKEN } from '@env';
 import { sensors } from '../../constants/dummy-data';
 import { colors, font, spacing, radius } from '../../constants/theme';
 
+const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
 // Temperature (20-45°C) to heatmap weight (0.1-1.0)
