@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import * as Notifications from 'expo-notifications';
 
 export type AlertSeverity = 'critical' | 'high' | 'moderate' | 'low';
 
@@ -22,6 +23,47 @@ type AlertsContextType = {
 const WS_URL = 'ws://localhost:8086/ws';
 const RECONNECT_DELAY = 3000;
 
+// Configure how notifications appear when app is foregrounded
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+const severityIcon: Record<string, string> = {
+  critical: '🔴',
+  high: '🟠',
+  moderate: '🟡',
+  low: '🟢',
+};
+
+async function requestNotificationPermissions() {
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== 'granted') {
+    console.warn('[AeroSafe] Notification permissions not granted');
+  }
+}
+
+async function showLocalNotification(alert: Alert) {
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `${severityIcon[alert.severity] ?? '⚠️'} ${alert.title}`,
+        body: alert.description,
+        data: { alertId: alert.id, severity: alert.severity },
+        sound: true,
+      },
+      trigger: null, // show immediately
+    });
+  } catch (e) {
+    console.warn('[AeroSafe] Failed to show notification:', e);
+  }
+}
+
 const AlertsContext = createContext<AlertsContextType>({
   alerts: [],
   connected: false,
@@ -35,6 +77,11 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(true);
 
+  // Request permissions on mount
+  useEffect(() => {
+    requestNotificationPermissions();
+  }, []);
+
   const connect = useCallback(() => {
     if (!isMounted.current) return;
 
@@ -47,11 +94,12 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
       setConnected(true);
     };
 
-    ws.onmessage = (event) => {
+    ws.onmessage = async (event) => {
       try {
         const alert: Alert = JSON.parse(event.data);
         console.log(`[AeroSafe] 📣 Alert received: ${alert.title} (${alert.severity})`);
-        setAlerts(prev => [alert, ...prev].slice(0, 100)); // keep last 100
+        setAlerts(prev => [alert, ...prev].slice(0, 100));
+        await showLocalNotification(alert);
       } catch (e) {
         console.warn('[AeroSafe] Failed to parse alert:', event.data);
       }
