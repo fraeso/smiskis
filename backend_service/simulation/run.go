@@ -43,27 +43,88 @@ type SensorCluster struct {
 
 // Define sensor clusters in bushfire-prone areas across Australia
 // These areas have significant bushfire history and risk
+// Sensor counts vary from 4-15 per cluster
 var sensorClusters = []SensorCluster{
-	{"Blue Mountains National Park", -33.7121, 150.3119, 25, 60, "forest"},
-	{"Dandenong Ranges", -37.8339, 145.3508, 18, 50, "forest"},
-	{"Adelaide Hills", -34.9285, 138.6007, 22, 55, "forest"},
-	{"Yarra Ranges", -37.6883, 145.4617, 20, 50, "forest"},
-	{"Kinglake National Park", -37.5167, 145.3167, 18, 55, "forest"},
-	{"East Gippsland", -37.5000, 148.2500, 30, 60, "forest"},
-	{"Grampians National Park", -37.2156, 142.5167, 25, 45, "forest"},
-	{"Otway Ranges", -38.6616, 143.3901, 20, 40, "forest"},
-	{"Perth Hills", -32.0500, 116.1000, 18, 50, "forest"},
-	{"Margaret River Region", -33.9544, 115.0764, 22, 45, "forest"},
-	{"Kangaroo Island", -35.7751, 137.2142, 28, 55, "coastal"},
-	{"South Coast NSW", -36.2000, 150.1000, 25, 50, "coastal"},
-	{"Shoalhaven Region", -35.0300, 150.4500, 20, 45, "forest"},
-	{"Illawarra Escarpment", -34.4500, 150.8500, 15, 40, "forest"},
-	{"Snowy Mountains", -36.4500, 148.2600, 30, 50, "forest"},
-	{"Alpine National Park", -37.0833, 147.2500, 28, 50, "forest"},
-	{"Ku-ring-gai Chase", -33.6500, 151.2000, 15, 45, "forest"},
-	{"Royal National Park", -34.1333, 151.0500, 18, 50, "coastal"},
-	{"Victorian High Country", -37.0500, 146.9000, 32, 60, "forest"},
-	{"Macedon Ranges", -37.4167, 144.5833, 20, 45, "forest"},
+	// NSW - Eastern Regions
+	{"Blue Mountains National Park", -33.7121, 150.3119, 25, 12, "forest"},
+	{"Ku-ring-gai Chase", -33.6500, 151.2000, 15, 8, "forest"},
+	{"Royal National Park", -34.1333, 151.0500, 18, 10, "coastal"},
+	{"Shoalhaven Region", -35.0300, 150.4500, 20, 9, "forest"},
+	{"Illawarra Escarpment", -34.4500, 150.8500, 15, 7, "forest"},
+	{"South Coast NSW", -36.2000, 150.1000, 25, 11, "coastal"},
+	{"Snowy Mountains", -36.4500, 148.2600, 30, 13, "forest"},
+	{"Central Coast NSW", -33.3000, 151.2000, 12, 6, "coastal"},
+	{"Hunter Valley", -32.5000, 151.2000, 18, 9, "forest"},
+	{"Barrington Tops", -31.9500, 151.5000, 20, 10, "forest"},
+	{"Northern Rivers NSW", -28.8000, 153.2500, 15, 8, "forest"},
+	{"Gibraltar Range", -29.5000, 152.3000, 18, 9, "forest"},
+	{"New England Tablelands", -30.5000, 151.6500, 22, 11, "forest"},
+	{"Warrumbungle Ranges", -31.2800, 149.0000, 20, 8, "forest"},
+
+	// Victoria
+	{"Dandenong Ranges", -37.8339, 145.3508, 18, 10, "forest"},
+	{"Yarra Ranges", -37.6883, 145.4617, 20, 11, "forest"},
+	{"Kinglake National Park", -37.5167, 145.3167, 18, 9, "forest"},
+	{"East Gippsland", -37.5000, 148.2500, 30, 14, "forest"},
+	{"Grampians National Park", -37.2156, 142.5167, 25, 12, "forest"},
+	{"Otway Ranges", -38.6616, 143.3901, 20, 10, "forest"},
+	{"Alpine National Park", -37.0833, 147.2500, 28, 13, "forest"},
+	{"Victorian High Country", -37.0500, 146.9000, 32, 15, "forest"},
+	{"Macedon Ranges", -37.4167, 144.5833, 20, 9, "forest"},
+	{"Mornington Peninsula", -38.3667, 144.9833, 15, 7, "coastal"},
+	{"Strzelecki Ranges", -38.5000, 146.3333, 18, 8, "forest"},
+
+	// South Australia
+	{"Adelaide Hills", -34.9285, 138.6007, 22, 11, "forest"},
+	{"Kangaroo Island", -35.7751, 137.2142, 28, 13, "coastal"},
+	{"Flinders Ranges", -31.5000, 138.6500, 35, 15, "desert"},
+	{"Mount Lofty Ranges", -34.9833, 138.7167, 18, 9, "forest"},
+	{"Barossa Valley", -34.5500, 138.9833, 15, 7, "forest"},
+	{"Yorke Peninsula", -34.5000, 137.5000, 20, 8, "coastal"},
+	{"Eyre Peninsula", -33.5000, 135.8333, 25, 10, "coastal"},
+
+	// Western Australia
+	{"Perth Hills", -32.0500, 116.1000, 18, 9, "forest"},
+	{"Margaret River Region", -33.9544, 115.0764, 22, 10, "forest"},
+	{"Stirling Range", -34.3833, 118.0667, 20, 9, "forest"},
+	{"Porongurup Range", -34.6667, 117.8667, 12, 5, "forest"},
+	{"Denmark Region", -34.9600, 117.3500, 15, 7, "coastal"},
+	{"Darling Scarp", -32.4000, 116.2000, 18, 8, "forest"},
+	{"Kimberley Region", -17.5000, 124.5000, 40, 12, "desert"},
+	{"Pilbara Region", -22.0000, 118.0000, 35, 11, "desert"},
+	{"Esperance Hinterland", -33.8667, 121.8917, 20, 8, "coastal"},
+
+	// Queensland
+	{"Sunshine Coast Hinterland", -26.6500, 152.9500, 15, 8, "forest"},
+	{"Noosa Hinterland", -26.4000, 152.9500, 12, 6, "forest"},
+	{"Gold Coast Hinterland", -28.2000, 153.2500, 18, 9, "forest"},
+	{"Scenic Rim", -28.1000, 152.7000, 20, 10, "forest"},
+	{"D'Aguilar Range", -27.3333, 152.7500, 15, 7, "forest"},
+	{"Carnarvon Gorge", -25.0000, 148.2000, 25, 9, "forest"},
+	{"Whitsunday Coast", -20.2800, 148.7167, 18, 8, "coastal"},
+	{"Atherton Tablelands", -17.2667, 145.4667, 20, 9, "forest"},
+
+	// Tasmania
+	{"Tasmania Wilderness", -42.5000, 146.5000, 30, 14, "forest"},
+	{"Cradle Mountain", -41.6500, 145.9500, 25, 11, "forest"},
+	{"Freycinet Peninsula", -42.1333, 148.3000, 18, 8, "coastal"},
+	{"Mount Wellington", -42.8900, 147.2400, 15, 7, "forest"},
+	{"Huon Valley", -43.0333, 146.9667, 20, 9, "forest"},
+
+	// Central Australia / Northern Territory
+	{"Alice Springs Region", -23.7000, 133.8807, 30, 10, "desert"},
+	{"MacDonnell Ranges", -23.6667, 133.0000, 35, 12, "desert"},
+	{"Uluru-Kata Tjuta", -25.3444, 131.0369, 25, 8, "desert"},
+	{"Tanami Desert Edge", -20.0000, 130.0000, 40, 9, "desert"},
+	{"Simpson Desert Edge", -25.5000, 137.5000, 35, 8, "desert"},
+	{"Kakadu National Park", -12.6500, 132.8833, 30, 13, "forest"},
+	{"Arnhem Land", -12.5000, 134.0000, 35, 11, "forest"},
+	{"Katherine Region", -14.4650, 132.2650, 25, 9, "desert"},
+	{"Finke Gorge", -24.1000, 132.7500, 20, 6, "desert"},
+
+	// ACT
+	{"Canberra Bushland", -35.2809, 149.1300, 15, 8, "forest"},
+	{"Namadgi National Park", -35.6167, 148.9833, 20, 10, "forest"},
 }
 
 func Run(conn *sql.DB) {
