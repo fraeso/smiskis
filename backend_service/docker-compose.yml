@@ -2,7 +2,7 @@
 # DO NOT USE ACTUAL PASSWORDS PLS BRO
 services:
   postgres:
-    image: timescale/timescaledb:latest-pg17
+    image: timescale/timescaledb-ha:cicd-e2f4bf5
     container_name: smiskis-postgres
     restart: unless-stopped
     environment:
