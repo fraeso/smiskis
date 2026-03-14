@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/fraeso/smiskis/database"
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -14,9 +15,14 @@ func main() {
 	println(dsn)
 
 	// TODO: try to connect to db with pooling
+	_, err := database.NewPgPool(dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// TODO: try to migrate db based on migration files
 	// TODO: run goroutine to continuously simulate/generate and write to db
-	// TODO: start ws server
+	// TODO: start ws server for alerts
 }
 
 // TODO: maybe check empty env values lol

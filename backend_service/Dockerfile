@@ -13,7 +13,7 @@ COPY . .
 
 # Build the Go application, making it statically linked (CGO_ENABLED=0)
 # and placing the binary in /app/server
-RUN CGO_ENABLED=0 go build -v -o /app/server ./...
+RUN CGO_ENABLED=0 go build -v -o /app/server ./cmd/api
 
 # Stage 2: Create a minimal runtime image
 # Use the "scratch" base image for the absolute smallest possible image
