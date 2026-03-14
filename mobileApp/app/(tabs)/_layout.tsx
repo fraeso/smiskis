@@ -47,7 +47,7 @@ export default function TabLayout() {
         name="sensors"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'radio' : 'radio-outline'} label="Sensor" focused={focused} />
+            <TabIcon name={focused ? 'radio' : 'radio-outline'} label="Sensors" focused={focused} />
           ),
         }}
       />
@@ -73,6 +73,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   tabItem: { alignItems: 'center', gap: 3 },
-  tabLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '500' },
+  tabLabel: { color: colors.textMuted, fontSize: 7, fontWeight: '500' },
   tabLabelFocused: { color: colors.accent, fontWeight: '700' },
 });

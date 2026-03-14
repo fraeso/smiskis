@@ -74,12 +74,13 @@ const riskColorMap: Record<string, string> = {
   normal: colors.normal,
 };
 
-type ViewMode = 'heatmap' | 'zones';
+type ViewMode = 'heatmap' | 'zones' | 'clean';
 type SelectedSensor = typeof sensors[0] | null;
 
 export default function MapScreen() {
   const [selectedSensor, setSelectedSensor] = useState<SelectedSensor>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
+  const [showHeat, setShowHeat] = useState(false);
+  const [showZones, setShowZones] = useState(false);
   const params = useLocalSearchParams<{ sensorId?: string; lat?: string; lng?: string }>();
   const cameraRef = useRef<MapboxGL.Camera>(null);
   const calloutAnim = useRef(new Animated.Value(0)).current;
@@ -146,18 +147,18 @@ export default function MapScreen() {
         {/* Mode toggle */}
         <View style={styles.segmented}>
           <TouchableOpacity
-            style={[styles.segBtn, viewMode === 'heatmap' && styles.segBtnActive]}
-            onPress={() => setViewMode('heatmap')}
+            style={[styles.segBtn, showHeat && styles.segBtnActive]}
+            onPress={() => setShowHeat(!showHeat)}
           >
-            <Ionicons name="flame" size={13} color={viewMode === 'heatmap' ? colors.critical : colors.textMuted} />
-            <Text style={[styles.segText, viewMode === 'heatmap' && styles.segTextActive]}>Heatmap</Text>
+            <Ionicons name="flame" size={13} color={showHeat ? colors.accent : colors.textMuted} />
+            <Text style={[styles.segText, showHeat && styles.segTextActive]}>Heat</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.segBtn, viewMode === 'zones' && styles.segBtnActive]}
-            onPress={() => setViewMode('zones')}
+            style={[styles.segBtn, showZones && styles.segBtnActive]}
+            onPress={() => setShowZones(!showZones)}
           >
-            <Ionicons name="radio" size={13} color={viewMode === 'zones' ? colors.critical : colors.textMuted} />
-            <Text style={[styles.segText, viewMode === 'zones' && styles.segTextActive]}>Zones</Text>
+            <Ionicons name="radio" size={13} color={showZones ? colors.accent : colors.textMuted} />
+            <Text style={[styles.segText, showZones && styles.segTextActive]}>Zones</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -179,7 +180,7 @@ export default function MapScreen() {
           />
 
           {/* ── HEATMAP MODE ── */}
-          {viewMode === 'heatmap' && (
+          {showHeat && (
             <MapboxGL.ShapeSource id="heatmap-source" shape={pointGeoJSON}>
               <MapboxGL.HeatmapLayer
                 id="heatmap-layer"
@@ -207,7 +208,7 @@ export default function MapScreen() {
           )}
 
           {/* ── ZONES MODE ── */}
-          {viewMode === 'zones' && (
+          {showZones && (
             <MapboxGL.ShapeSource id="zones-source" shape={zoneGeoJSON}>
               <MapboxGL.FillLayer
                 id="zones-fill"
@@ -219,9 +220,9 @@ export default function MapScreen() {
                     colors.normal,
                   ] as any,
                   fillOpacity: ['match', ['get', 'riskLevel'],
-                    'critical', 0.18,
-                    'elevated', 0.12,
-                    0.08,
+                    'critical', showHeat ? 0.06 : 0.18,
+                    'elevated', showHeat ? 0.04 : 0.12,
+                    showHeat ? 0.02 : 0.08,
                   ] as any,
                 }}
               />
@@ -236,9 +237,9 @@ export default function MapScreen() {
                   ] as any,
                   lineWidth: 1,
                   lineOpacity: ['match', ['get', 'riskLevel'],
-                    'critical', 0.55,
-                    'elevated', 0.4,
-                    0.25,
+                    'critical', showHeat ? 0.3 : 0.55,
+                    'elevated', showHeat ? 0.2 : 0.4,
+                    showHeat ? 0.12 : 0.25,
                   ] as any,
                   lineDasharray: [3, 2] as any,
                 }}
@@ -248,6 +249,19 @@ export default function MapScreen() {
 
           {/* ── SENSOR DOTS — always visible ── */}
           <MapboxGL.ShapeSource id="sensors-source" shape={pointGeoJSON} onPress={handleSensorPress}>
+            {/* White ring for selected sensor — rendered at map level so it aligns correctly */}
+            <MapboxGL.CircleLayer
+              id="sensors-selected-ring"
+              sourceID="sensors-source"
+              filter={selectedSensor ? ['==', ['get', 'sensorId'], selectedSensor.sensorId] : ['==', '1', '0'] as any}
+              style={{
+                circleRadius: 14,
+                circleColor: 'transparent',
+                circleStrokeWidth: 2.5,
+                circleStrokeColor: '#ffffff',
+                circleStrokeOpacity: 0.9,
+              }}
+            />
             <MapboxGL.CircleLayer
               id="sensors-dot"
               sourceID="sensors-source"
@@ -265,19 +279,7 @@ export default function MapScreen() {
             />
           </MapboxGL.ShapeSource>
 
-          {/* ── SELECTED SENSOR PIN ── */}
-          {selectedSensor && (
-            <MapboxGL.PointAnnotation
-              key={selectedSensor.sensorId}
-              id="selected-pin"
-              coordinate={[selectedSensor.location.lng, selectedSensor.location.lat]}
-            >
-              <View style={[styles.pin, {
-                borderColor: '#ffffff',
-                backgroundColor: 'rgba(255,255,255,0.15)',
-              }]} />
-            </MapboxGL.PointAnnotation>
-          )}
+
         </MapboxGL.MapView>
 
         {/* Legend */}
@@ -348,9 +350,9 @@ const styles = StyleSheet.create({
   subtitle: { color: colors.textMuted, fontSize: font.sm, marginTop: 2 },
   segmented: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   segBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  segBtnActive: { backgroundColor: colors.criticalBg, borderColor: colors.critical },
+  segBtnActive: { backgroundColor: colors.bgCardAlt, borderColor: colors.accent },
   segText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '600' },
-  segTextActive: { color: colors.critical },
+  segTextActive: { color: colors.accent },
   mapContainer: { flex: 1, position: 'relative' },
   map: { flex: 1 },
   legend: { position: 'absolute', top: spacing.lg, right: spacing.lg, backgroundColor: 'rgba(17,20,24,0.93)', borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: spacing.sm },
