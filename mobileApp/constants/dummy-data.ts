@@ -3,7 +3,7 @@
 // These will match your WebSocket payload exactly
 // ============================================================
 
-export type RiskLevel = 'critical' | 'elevated' | 'normal';
+export type RiskLevel = 'critical' | 'high' | 'moderate' | 'low';
 
 export type SensorReading = {
   sensorId: string;
@@ -106,7 +106,7 @@ export const sensors: SensorReading[] = [
       lng: 143.85,
     },
     readings: { temperature: 31.2, humidity: 38, vocLevel: 320, airQualityIndex: 94 },
-    riskLevel: 'elevated',
+    riskLevel: 'moderate',
     timestamp: ts(5),
   },
   {
@@ -118,7 +118,7 @@ export const sensors: SensorReading[] = [
       lng: 144.28,
     },
     readings: { temperature: 30.8, humidity: 40, vocLevel: 290, airQualityIndex: 88 },
-    riskLevel: 'elevated',
+    riskLevel: 'moderate',
     timestamp: ts(4),
   },
   {
@@ -130,7 +130,7 @@ export const sensors: SensorReading[] = [
       lng: 144.36,
     },
     readings: { temperature: 29.5, humidity: 42, vocLevel: 270, airQualityIndex: 82 },
-    riskLevel: 'elevated',
+    riskLevel: 'high',
     timestamp: ts(6),
   },
   {
@@ -142,7 +142,7 @@ export const sensors: SensorReading[] = [
       lng: 146.88,
     },
     readings: { temperature: 32.1, humidity: 35, vocLevel: 310, airQualityIndex: 91 },
-    riskLevel: 'elevated',
+    riskLevel: 'high',
     timestamp: ts(3),
   },
   {
@@ -154,7 +154,7 @@ export const sensors: SensorReading[] = [
       lng: 142.49,
     },
     readings: { temperature: 28.9, humidity: 44, vocLevel: 250, airQualityIndex: 76 },
-    riskLevel: 'elevated',
+    riskLevel: 'high',
     timestamp: ts(7),
   },
   {
@@ -166,7 +166,7 @@ export const sensors: SensorReading[] = [
       lng: 147.07,
     },
     readings: { temperature: 30.2, humidity: 39, vocLevel: 280, airQualityIndex: 85 },
-    riskLevel: 'elevated',
+    riskLevel: 'high',
     timestamp: ts(5),
   },
   {
@@ -178,7 +178,7 @@ export const sensors: SensorReading[] = [
       lng: 145.4,
     },
     readings: { temperature: 27.3, humidity: 52, vocLevel: 120, airQualityIndex: 38 },
-    riskLevel: 'normal',
+    riskLevel: 'low',
     timestamp: ts(10),
   },
   {
@@ -190,7 +190,7 @@ export const sensors: SensorReading[] = [
       lng: 142.15,
     },
     readings: { temperature: 26.8, humidity: 55, vocLevel: 100, airQualityIndex: 32 },
-    riskLevel: 'normal',
+    riskLevel: 'low',
     timestamp: ts(12),
   },
 
@@ -224,8 +224,9 @@ export const sensors: SensorReading[] = [
 
 export const networkStats = {
   critical: sensors.filter(s => s.riskLevel === 'critical').length,
-  elevated: sensors.filter(s => s.riskLevel === 'elevated').length,
-  normal: sensors.filter(s => s.riskLevel === 'normal').length,
+  high: sensors.filter(s => s.riskLevel === 'high').length,
+  moderate: sensors.filter(s => s.riskLevel === 'moderate').length,
+  low: sensors.filter(s => s.riskLevel === 'low').length,
 };
 
 // ============================================================
@@ -274,7 +275,7 @@ export const allAlerts: Alert[] = [
     id: 'ALERT-002',
     title: 'Elevated VOC Levels',
     description: 'VOC readings above 400ppb detected at Ballarat and Geelong stations.',
-    severity: 'elevated',
+    severity: 'high',
     locations: ['Ballarat', 'Geelong'],
     time: '23 min ago',
     timestamp: ts(23),
@@ -284,7 +285,7 @@ export const allAlerts: Alert[] = [
     id: 'ALERT-003',
     title: 'Wind Speed Increase',
     description: 'Sustained winds above 45km/h increasing fire spread risk in northeast corridor.',
-    severity: 'elevated',
+    severity: 'high',
     locations: ['Wodonga', 'Sale'],
     time: '1 hr ago',
     timestamp: ts(60),
@@ -294,7 +295,7 @@ export const allAlerts: Alert[] = [
     id: 'ALERT-004',
     title: 'Humidity Drop Detected',
     description: 'Relative humidity fell below 20% across 3 monitoring zones.',
-    severity: 'elevated',
+    severity: 'high',
     locations: ['Marysville SF', 'Kinglake NP'],
     time: '2 hr ago',
     timestamp: ts(120),
@@ -304,7 +305,7 @@ export const allAlerts: Alert[] = [
     id: 'ALERT-005',
     title: 'All Clear — Shepparton',
     description: 'Risk levels returned to normal at Shepparton station after earlier elevated reading.',
-    severity: 'normal',
+    severity: 'low',
     locations: ['Shepparton'],
     time: '3 hr ago',
     timestamp: ts(180),
@@ -314,7 +315,7 @@ export const allAlerts: Alert[] = [
     id: 'ALERT-006',
     title: 'Routine Check Complete',
     description: 'All 12 sensors reporting healthy signal strength and calibration status.',
-    severity: 'normal',
+    severity: 'low',
     locations: ['All Stations'],
     time: '6 hr ago',
     timestamp: ts(360),
@@ -334,17 +335,17 @@ export const riskZones = [
   },
   {
     id: 'zone2',
-    risk: 'critical' as RiskLevel,
+    risk: 'high' as RiskLevel,
     coordinates: [[145.55, -37.35], [145.95, -37.35], [145.95, -37.7], [145.55, -37.7], [145.55, -37.35]],
   },
   {
     id: 'zone3',
-    risk: 'elevated' as RiskLevel,
+    risk: 'moderate' as RiskLevel,
     coordinates: [[143.6, -37.4], [144.1, -37.4], [144.1, -37.8], [143.6, -37.8], [143.6, -37.4]],
   },
   {
     id: 'zone4',
-    risk: 'elevated' as RiskLevel,
+    risk: 'moderate' as RiskLevel,
     coordinates: [[144.0, -36.55], [144.6, -36.55], [144.6, -36.95], [144.0, -36.95], [144.0, -36.55]],
   },
 ];
