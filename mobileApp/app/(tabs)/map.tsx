@@ -68,7 +68,7 @@ type SelectedSensor = SensorReading | null;
 
 export default function MapScreen() {
   const { sensors, loading } = useSensors();
-  const [selectedSensor, setSelectedSensor] = useState<SelectedSensor>(null);
+  const [selectedSensorId, setSelectedSensorId] = useState<string | null>(null);
   const [showHeat, setShowHeat] = useState(false);
   const [showZones, setShowZones] = useState(false);
   const [dotColorMode, setDotColorMode] = useState<DotColorMode>('risk');
@@ -76,6 +76,11 @@ export default function MapScreen() {
   const cameraRef = useRef<MapboxGL.Camera>(null);
   const calloutAnim = useRef(new Animated.Value(0)).current;
   const hasFitBounds = useRef(false);
+
+  // Derive selected sensor from live data — always up to date after polls
+  const selectedSensor = selectedSensorId
+    ? sensors.find(s => s.sensorId === selectedSensorId) ?? null
+    : null;
 
   // Auto-fit camera to sensor bounds once data loads
   useEffect(() => {
@@ -164,7 +169,7 @@ export default function MapScreen() {
             animationDuration: 1000,
             animationMode: 'flyTo',
           });
-          setSelectedSensor(sensor);
+          setSelectedSensorId(sensor.sensorId);
         }, 500);
       }
     }
@@ -179,14 +184,14 @@ export default function MapScreen() {
       [Math.min(...lngs) - 0.5, Math.min(...lats) - 0.5],
       100, 800,
     );
-    setSelectedSensor(null);
+    setSelectedSensorId(null);
   };
 
   const handleSensorPress = (e: any) => {
     const feature = e.features[0];
     if (feature?.properties) {
       const sensor = sensors.find(s => s.sensorId === feature.properties?.sensorId);
-      if (sensor) setSelectedSensor(sensor);
+      if (sensor) setSelectedSensorId(sensor.sensorId);
     }
   };
 
@@ -201,18 +206,18 @@ export default function MapScreen() {
         </View>
         <View style={styles.segmented}>
           <TouchableOpacity
-            style={[styles.segBtn, showHeat && styles.segBtnActive]}
+            style={[styles.segBtn, showHeat ? styles.segBtnActive : undefined]}
             onPress={() => setShowHeat(!showHeat)}
           >
             <Ionicons name="flame" size={13} color={showHeat ? colors.accent : colors.textMuted} />
-            <Text style={[styles.segText, showHeat && styles.segTextActive]}>Heat</Text>
+            <Text style={[styles.segText, showHeat ? styles.segTextActive : undefined]}>Heat</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.segBtn, showZones && styles.segBtnActive]}
+            style={[styles.segBtn, showZones ? styles.segBtnActive : undefined]}
             onPress={() => setShowZones(!showZones)}
           >
             <Ionicons name="radio" size={13} color={showZones ? colors.accent : colors.textMuted} />
-            <Text style={[styles.segText, showZones && styles.segTextActive]}>Zones</Text>
+            <Text style={[styles.segText, showZones ? styles.segTextActive : undefined]}>Zones</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -228,10 +233,10 @@ export default function MapScreen() {
         ]).map((item) => (
           <TouchableOpacity
             key={item.mode}
-            style={[styles.colorFilterBtn, dotColorMode === item.mode && styles.colorFilterBtnActive]}
+            style={[styles.colorFilterBtn, dotColorMode === item.mode ? styles.colorFilterBtnActive : undefined]}
             onPress={() => setDotColorMode(item.mode)}
           >
-            <Text style={[styles.colorFilterText, dotColorMode === item.mode && styles.colorFilterTextActive]}>
+            <Text style={[styles.colorFilterText, dotColorMode === item.mode ? styles.colorFilterTextActive : undefined]}>
               {item.label}
             </Text>
           </TouchableOpacity>
@@ -244,7 +249,7 @@ export default function MapScreen() {
           styleURL="mapbox://styles/mapbox/dark-v11"
           logoEnabled={false}
           attributionEnabled={false}
-          onPress={() => setSelectedSensor(null)}
+          onPress={() => setSelectedSensorId(null)}
         >
           <MapboxGL.Camera
             ref={cameraRef}
@@ -331,7 +336,7 @@ export default function MapScreen() {
             <MapboxGL.CircleLayer
               id="sensors-selected-ring"
               sourceID="sensors-source"
-              filter={selectedSensor ? ['==', ['get', 'sensorId'], selectedSensor.sensorId] : ['==', '1', '0'] as any}
+              filter={selectedSensorId ? ['==', ['get', 'sensorId'], selectedSensorId] : ['==', '1', '0'] as any}
               style={{
                 circleRadius: 14,
                 circleColor: 'transparent',
@@ -382,6 +387,16 @@ export default function MapScreen() {
           <Text style={styles.sensorPillText}>{sensors.length} Sensors Active</Text>
         </TouchableOpacity>
 
+        {/* Loading overlay — first load only */}
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <View style={styles.loadingCard}>
+              <Ionicons name="radio-outline" size={24} color={colors.accent} />
+              <Text style={styles.loadingText}>Loading sensors...</Text>
+            </View>
+          </View>
+        )}
+
         {/* Sensor callout — animated slide up */}
         {selectedSensor && (
           <Animated.View style={[styles.callout, {
@@ -397,7 +412,7 @@ export default function MapScreen() {
             <View style={styles.calloutHeader}>
               <View style={[styles.calloutDot, { backgroundColor: riskColorMap[selectedSensor.riskLevel] }]} />
               <Text style={styles.calloutName}>{selectedSensor.location.name}</Text>
-              <TouchableOpacity onPress={() => setSelectedSensor(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity onPress={() => setSelectedSensorId(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name="close" size={16} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
@@ -429,7 +444,7 @@ const styles = StyleSheet.create({
   subtitle: { color: colors.textMuted, fontSize: font.sm, marginTop: 2 },
   segmented: { flexDirection: 'row', backgroundColor: colors.bgCard, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   segBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  segBtnActive: { backgroundColor: colors.bgCardAlt, borderColor: colors.accent },
+  segBtnActive: { backgroundColor: colors.bgCardAlt },
   segText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '600' },
   segTextActive: { color: colors.accent },
   colorFilterRow: { flexDirection: 'row', paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: spacing.sm },
@@ -447,6 +462,9 @@ const styles = StyleSheet.create({
   sensorPill: { position: 'absolute', bottom: spacing.xl, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: 'rgba(17,20,24,0.93)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   sensorPillText: { color: colors.textSecondary, fontSize: font.sm, fontWeight: '600' },
   pin: { width: 24, height: 24, borderRadius: 12, borderWidth: 3 },
+  loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,12,15,0.6)' },
+  loadingCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl, alignItems: 'center', gap: spacing.md },
+  loadingText: { color: colors.textSecondary, fontSize: font.md, fontWeight: '600' },
   callout: { position: 'absolute', bottom: spacing.xl * 3, left: spacing.lg, right: spacing.lg, backgroundColor: 'rgba(17,20,24,0.97)', borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   calloutAccent: { height: 3, width: '100%' },
   calloutHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, padding: spacing.lg, paddingBottom: 0 },
