@@ -20,7 +20,7 @@ func main() {
 	println(dsn)
 
 	// TODO: try to connect to db with pooling
-	_, err := database.NewPgPool(dsn)
+	conn, err := database.NewPgPool(dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,16 +30,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := m.Up(); err != nil {
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatal(err)
 	}
-	// run goroutine to continuously simulate/generate and write to db
+	log.Println("Database migrations completed successfully")
+
+	// run simulation to continuously generate and write sensor data to db
 	//
 	// simulates sensor data coming through mqtt and being written to database
 	// continuously
 	//
-	// simulation also creates dummy sensors in different areas of Australia
-	go simulation.Run()
+	// simulation also creates dummy sensor clusters in different areas of Australia
+	simulation.Run(conn)
 
 	// TODO: start ws server for live alerts
 	// TODO: start http server for data polling endpoints
