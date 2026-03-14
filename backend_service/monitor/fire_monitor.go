@@ -25,8 +25,13 @@ type FireAlert struct {
 	CurrentRisk     string    `json:"current_risk_level"`
 }
 
+// AlertBroadcaster is an interface for broadcasting alerts to WebSocket clients
+type AlertBroadcaster interface {
+	BroadcastFireAlert(alert interface{}) error
+}
+
 // StartFireMonitor listens to PostgreSQL notifications for real-time fire alerts
-func StartFireMonitor(dsn string) {
+func StartFireMonitor(dsn string, broadcaster AlertBroadcaster) {
 	log.Println("Starting real-time fire monitoring service...")
 
 	ctx := context.Background()
@@ -62,7 +67,7 @@ func StartFireMonitor(dsn string) {
 			continue
 		}
 
-		handleFireAlert(notification)
+		handleFireAlert(notification, broadcaster)
 	}
 }
 
@@ -77,7 +82,7 @@ type AlertLog struct {
 	CallToAction string   `json:"callToAction"`
 }
 
-func handleFireAlert(notification *pgconn.Notification) {
+func handleFireAlert(notification *pgconn.Notification, broadcaster AlertBroadcaster) {
 	var alert FireAlert
 
 	// Parse the JSON payload
@@ -112,4 +117,14 @@ func handleFireAlert(notification *pgconn.Notification) {
 
 	log.Println("🔥 FIRE STARTED!")
 	log.Println(string(alertJSON))
+
+	// Broadcast to WebSocket clients
+	if broadcaster != nil {
+		err = broadcaster.BroadcastFireAlert(alertLog)
+		if err != nil {
+			log.Printf("Error broadcasting fire alert to WebSocket clients: %v", err)
+		} else {
+			log.Println("✅ Alert broadcasted to WebSocket clients")
+		}
+	}
 }

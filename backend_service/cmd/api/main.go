@@ -9,6 +9,7 @@ import (
 	"github.com/fraeso/smiskis/monitor"
 	"github.com/fraeso/smiskis/repository"
 	srv "github.com/fraeso/smiskis/server/http"
+	"github.com/fraeso/smiskis/websocket"
 
 	"github.com/fraeso/smiskis/simulation"
 	_ "github.com/joho/godotenv/autoload"
@@ -45,6 +46,11 @@ func main() {
 	// create router with all middlewares and routes
 	router := srv.NewRouter(sensorRepo)
 
+	// create WebSocket hub for broadcasting fire alerts
+	hub := websocket.NewHub()
+	go hub.Run()
+	log.Println("WebSocket hub started")
+
 	// start http server for data polling endpoints in a goroutine
 	go func() {
 		log.Printf("Starting HTTP server on %s", httpAddr)
@@ -53,8 +59,17 @@ func main() {
 		}
 	}()
 
+	// start WebSocket server for live alerts
+	go func() {
+		http.HandleFunc("/ws", websocket.HandleWebSocket(hub))
+		log.Printf("Starting WebSocket server on %s", wsAddr)
+		if err := http.ListenAndServe(wsAddr, nil); err != nil {
+			log.Fatalf("WebSocket server failed: %v", err)
+		}
+	}()
+
 	// start fire monitoring service in a goroutine (uses separate connection for LISTEN)
-	go monitor.StartFireMonitor(dsn)
+	go monitor.StartFireMonitor(dsn, hub)
 
 	// run simulation to continuously generate and write sensor data to db
 	//
@@ -63,9 +78,6 @@ func main() {
 	//
 	// simulation also creates dummy sensor clusters in different areas of Australia
 	simulation.Run(conn)
-
-	// TODO: start ws server for live alerts on wsAddr
-	_ = wsAddr
 }
 
 func getEnvs() (httpAddr, wsAddr, dsn string) {
