@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/fraeso/smiskis/database"
+	"github.com/fraeso/smiskis/simulation"
 	_ "github.com/joho/godotenv/autoload"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -32,8 +33,16 @@ func main() {
 	if err := m.Up(); err != nil {
 		log.Fatal(err)
 	}
-	// TODO: run goroutine to continuously simulate/generate and write to db
-	// TODO: start ws server for alerts
+	// run goroutine to continuously simulate/generate and write to db
+	//
+	// simulates sensor data coming through mqtt and being written to database
+	// continuously
+	//
+	// simulation also creates dummy sensors in different areas of Australia
+	go simulation.Run()
+
+	// TODO: start ws server for live alerts
+	// TODO: start http server for data polling endpoints
 }
 
 // TODO: maybe check empty env values lol
