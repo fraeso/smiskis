@@ -32,7 +32,7 @@ func NewRouter(sensorRepo repository.SensorRepository) http.Handler {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	// Initialize handlers
+	// Initialise handlers
 	sensorHandler := handlers.NewSensorHandler(sensorRepo)
 
 	// Routes

@@ -205,7 +205,7 @@ func insertSensors(conn *sql.DB, sensors []Sensor) error {
 
 func backfillReadings(conn *sql.DB, sensors []Sensor, sensorStates map[string]*SensorReading) error {
 	now := time.Now()
-	startTime := now.AddDate(0, -1, 0) // 1 month ago
+	startTime := now.AddDate(0, 0, -7) // 1 week prior
 
 	log.Printf("Backfilling readings from %s to %s", startTime.Format(time.RFC3339), now.Format(time.RFC3339))
 
@@ -227,15 +227,37 @@ func backfillReadings(conn *sql.DB, sensors []Sensor, sensorStates map[string]*S
 
 	batchSize := 10000
 	recordCount := 0
+	minuteCounter := 0
 
-	// Generate readings every 5 minutes for each sensor
-	for currentTime := startTime; currentTime.Before(now); currentTime = currentTime.Add(5 * time.Minute) {
-		for _, sensor := range sensors {
+	// Generate readings every 1 minute for each sensor
+	for currentTime := startTime; currentTime.Before(now); currentTime = currentTime.Add(1 * time.Minute) {
+		minuteCounter++
+
+		// Pick exactly 1 random sensor to force into critical state every 2 minutes
+		var forceCriticalIndex int = -1
+		if minuteCounter%2 == 0 {
+			// Only pick sensors that are NOT already critical
+			var nonCriticalIndices []int
+			for i, sensor := range sensors {
+				prevReading := sensorStates[sensor.SensorID]
+				if prevReading == nil || prevReading.RiskLevel != "critical" {
+					nonCriticalIndices = append(nonCriticalIndices, i)
+				}
+			}
+
+			if len(nonCriticalIndices) > 0 {
+				// Pick random non-critical sensor to force critical
+				forceCriticalIndex = nonCriticalIndices[rand.Intn(len(nonCriticalIndices))]
+			}
+		}
+
+		for i, sensor := range sensors {
 			// Get previous reading for this sensor (if exists)
 			prevReading := sensorStates[sensor.SensorID]
 
 			// Generate new reading based on previous state
-			reading := generateReading(sensor.SensorID, currentTime, prevReading)
+			forceCritical := (i == forceCriticalIndex)
+			reading := generateReading(sensor.SensorID, currentTime, prevReading, forceCritical)
 
 			// Update sensor state
 			sensorStates[sensor.SensorID] = &reading
@@ -284,13 +306,17 @@ func backfillReadings(conn *sql.DB, sensors []Sensor, sensorStates map[string]*S
 }
 
 func continuousSimulation(conn *sql.DB, sensors []Sensor, sensorStates map[string]*SensorReading) {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
-	log.Println("Starting continuous sensor reading simulation (every 5 minutes)...")
+	log.Println("Starting continuous sensor reading simulation (every 1 minute)...")
 
+	minuteCounter := 0
 	for currentTime := range ticker.C {
-		if err := insertCurrentReadings(conn, sensors, sensorStates, currentTime); err != nil {
+		minuteCounter++
+		forceFireThisMinute := (minuteCounter%2 == 0)
+
+		if err := insertCurrentReadings(conn, sensors, sensorStates, currentTime, forceFireThisMinute); err != nil {
 			log.Printf("Error inserting current readings: %v", err)
 		} else {
 			log.Printf("Inserted readings for %s (%d sensors)", currentTime.Format(time.RFC3339), len(sensors))
@@ -298,7 +324,7 @@ func continuousSimulation(conn *sql.DB, sensors []Sensor, sensorStates map[strin
 	}
 }
 
-func insertCurrentReadings(conn *sql.DB, sensors []Sensor, sensorStates map[string]*SensorReading, currentTime time.Time) error {
+func insertCurrentReadings(conn *sql.DB, sensors []Sensor, sensorStates map[string]*SensorReading, currentTime time.Time, forceFireThisMinute bool) error {
 	ctx := context.Background()
 	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
@@ -315,12 +341,32 @@ func insertCurrentReadings(conn *sql.DB, sensors []Sensor, sensorStates map[stri
 	}
 	defer stmt.Close()
 
-	for _, sensor := range sensors {
+	// Pick exactly 1 random sensor to force into critical state (fire start)
+	// Only happens every 2 minutes (when forceFireThisMinute is true)
+	var forceCriticalIndex int = -1
+	if forceFireThisMinute {
+		// Only pick sensors that are NOT already critical
+		var nonCriticalIndices []int
+		for i, sensor := range sensors {
+			prevReading := sensorStates[sensor.SensorID]
+			if prevReading == nil || prevReading.RiskLevel != "critical" {
+				nonCriticalIndices = append(nonCriticalIndices, i)
+			}
+		}
+
+		if len(nonCriticalIndices) > 0 {
+			// Pick random non-critical sensor to force critical
+			forceCriticalIndex = nonCriticalIndices[rand.Intn(len(nonCriticalIndices))]
+		}
+	}
+
+	for i, sensor := range sensors {
 		// Get previous reading for this sensor
 		prevReading := sensorStates[sensor.SensorID]
 
 		// Generate new reading based on previous state
-		reading := generateReading(sensor.SensorID, currentTime, prevReading)
+		forceCritical := (i == forceCriticalIndex)
+		reading := generateReading(sensor.SensorID, currentTime, prevReading, forceCritical)
 
 		// Update sensor state
 		sensorStates[sensor.SensorID] = &reading
@@ -342,132 +388,54 @@ func insertCurrentReadings(conn *sql.DB, sensors []Sensor, sensorStates map[stri
 	return tx.Commit()
 }
 
-func generateReading(sensorID string, timestamp time.Time, prevReading *SensorReading) SensorReading {
-	// Generate realistic sensor data with temporal continuity
-	// If prevReading exists, make small changes; otherwise start fresh
-
-	hour := timestamp.Hour()
+func generateReading(sensorID string, timestamp time.Time, prevReading *SensorReading, forceCritical bool) SensorReading {
 	var temperature, humidity float64
 	var vocLevel, aqi int
 
-	if prevReading == nil {
-		// First reading for this sensor - generate initial state
-		// More varied starting distribution: 65% low, 20% moderate, 10% high, 5% critical
-		randScenario := rand.Float64()
-
-		if randScenario < 0.65 {
-			// Start in low risk
-			temperature = 14.0 + rand.Float64()*6 // 14-20°C
-			humidity = 60.0 + rand.Float64()*30   // 60-90%
-			vocLevel = 30 + rand.Intn(60)         // 30-90 ppb
-			aqi = 15 + rand.Intn(30)              // 15-45
-		} else if randScenario < 0.85 {
-			// Start in moderate risk
-			temperature = 22.0 + rand.Float64()*6 // 22-28°C
-			humidity = 35.0 + rand.Float64()*15   // 35-50%
-			vocLevel = 150 + rand.Intn(120)       // 150-270 ppb
-			aqi = 55 + rand.Intn(35)              // 55-90
-		} else if randScenario < 0.95 {
-			// Start in high risk
-			temperature = 30.0 + rand.Float64()*6 // 30-36°C
-			humidity = 20.0 + rand.Float64()*12   // 20-32%
-			vocLevel = 600 + rand.Intn(400)       // 600-1000 ppb
-			aqi = 110 + rand.Intn(50)             // 110-160
-		} else {
-			// Start in critical risk (fires already burning)
-			temperature = 35.0 + rand.Float64()*8 // 35-43°C
-			humidity = 12.0 + rand.Float64()*10   // 12-22%
-			vocLevel = 1200 + rand.Intn(1200)     // 1200-2400 ppb
-			aqi = 180 + rand.Intn(100)            // 180-280
-		}
+	// Force critical state if requested (guaranteed fire start)
+	if forceCritical && prevReading != nil && prevReading.RiskLevel != "critical" {
+		// Force transition to critical state
+		temperature = 36.0 + rand.Float64()*7.0 // 36-43°C
+		humidity = 15.0 + rand.Float64()*10.0   // 15-25%
+		vocLevel = 1400 + rand.Intn(1100)       // 1400-2500 ppb
+		aqi = 180 + rand.Intn(100)              // 180-280
+	} else if prevReading == nil {
+		// First reading - always start in normal low risk conditions
+		temperature = 16.0 + rand.Float64()*6.0 // 16-22°C
+		humidity = 60.0 + rand.Float64()*25.0   // 60-85%
+		vocLevel = 25 + rand.Intn(50)           // 25-75 ppb
+		aqi = 15 + rand.Intn(25)                // 15-40
 	} else {
-		// Evolve from previous reading with small changes
+		// Evolve from previous reading with smooth, natural changes (per minute)
 		temperature = prevReading.Temperature
 		humidity = prevReading.Humidity
 		vocLevel = prevReading.VOCLevel
 		aqi = prevReading.AirQualityIndex
 
-		// Small random walk for each parameter
-		// Temperature: ±0.5-2°C per 5 minutes (realistic)
-		tempChange := (rand.Float64()*4 - 2) // ±2°C max
-
-		// Add daily temperature cycle (warmer during day)
-		if hour >= 11 && hour <= 17 {
-			tempChange += 0.3 // Slight warming trend during hot hours
-		} else if hour >= 0 && hour <= 6 {
-			tempChange -= 0.3 // Slight cooling trend at night
-		}
-
+		// Temperature: very small gradual change ±0.1-0.3°C per minute
+		tempChange := (rand.Float64()*0.6 - 0.3)
 		temperature += tempChange
-		temperature = math.Max(8.0, math.Min(48.0, temperature)) // Clamp 8-48°C
+		temperature = math.Max(10.0, math.Min(45.0, temperature))
 
-		// Humidity: ±1-5% per 5 minutes (inverse to temperature)
-		humidityChange := (rand.Float64()*6 - 3) - (tempChange * 0.5) // Inverse correlation
+		// Humidity: small gradual change ±0.2-0.5% per minute
+		humidityChange := (rand.Float64()*1.0 - 0.5)
 		humidity += humidityChange
-		humidity = math.Max(10.0, math.Min(98.0, humidity)) // Clamp 10-98%
+		humidity = math.Max(15.0, math.Min(95.0, humidity))
 
-		// VOC: Can change more dramatically (smoke can appear quickly)
-		// 55% small change, 37% medium change, 8% large change/fire events
-		vocChange := 0
-		vocRand := rand.Float64()
+		// VOC: small drift ±2-8 ppb per minute for normal conditions
+		vocChange := rand.Intn(16) - 8
 
-		if vocRand < 0.55 {
-			// Small change: ±5-30 ppb (normal drift)
-			vocChange = rand.Intn(60) - 30
-		} else if vocRand < 0.92 {
-			// Medium change: ±50-200 ppb (smoke drifting in/out)
-			vocChange = rand.Intn(400) - 200
-		} else {
-			// Large change: fire events (8% chance)
-			if vocLevel < 1200 {
-				// Fire starting or intensifying - dramatic increase
-				vocChange = 800 + rand.Intn(1700) // +800 to +2500 ppb (more intense)
-
-				// Also spike temperature during fire events
-				temperature += 8.0 + rand.Float64()*12.0 // +8 to +20°C (hotter)
-				temperature = math.Min(48.0, temperature)
-
-				// Drop humidity during fire
-				humidity -= 15.0 + rand.Float64()*25.0 // -15 to -40% (drier)
-				humidity = math.Max(10.0, humidity)
-			} else if vocLevel > 2000 {
-				// Only clear if VOC is very high (fire sustained longer)
-				vocChange = -(400 + rand.Intn(600)) // -400 to -1000 ppb (faster clearing)
-
-				// Temperature and humidity recover slowly
-				temperature -= 2.0 + rand.Float64()*4.0
-				temperature = math.Max(8.0, temperature)
-
-				humidity += 5.0 + rand.Float64()*15.0
-				humidity = math.Min(98.0, humidity)
-			} else {
-				// Medium VOC (1200-2000): fire persists but can naturally extinguish
-				// 65% sustain, 35% start clearing (rain, wind change, firefighters)
-				// Average fire duration: ~30 minutes, some last hours
-				if rand.Float64() < 0.65 {
-					// Fire persists with small fluctuations
-					vocChange = rand.Intn(400) - 200 // ±200 ppb
-				} else {
-					// Natural extinguishing - significant drop
-					vocChange = -(600 + rand.Intn(800)) // -600 to -1400 ppb
-
-					// Conditions improve (rain, wind change)
-					temperature -= 4.0 + rand.Float64()*6.0
-					temperature = math.Max(8.0, temperature)
-
-					humidity += 15.0 + rand.Float64()*25.0
-					humidity = math.Min(98.0, humidity)
-				}
-			}
+		// If in critical state, gradually decrease VOC (fire clearing)
+		if prevReading.RiskLevel == "critical" {
+			vocChange = -(50 + rand.Intn(100)) // -50 to -150 ppb per minute
 		}
 
 		vocLevel += vocChange
-		vocLevel = int(math.Max(15.0, math.Min(3500.0, float64(vocLevel)))) // Clamp 15-3500 ppb
+		vocLevel = int(math.Max(20.0, math.Min(3000.0, float64(vocLevel))))
 
-		// AQI: follows VOC more closely
-		aqiChange := vocChange / 8 // More responsive to VOC changes
-		aqi += aqiChange
-		aqi = int(math.Max(5.0, math.Min(400.0, float64(aqi)))) // Clamp 5-400
+		// AQI: follows VOC changes
+		aqi = vocLevel / 10
+		aqi = int(math.Max(10.0, math.Min(350.0, float64(aqi))))
 	}
 
 	// Fire risk calculation based on NIH research formula

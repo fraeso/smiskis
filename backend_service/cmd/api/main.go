@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/fraeso/smiskis/database"
+	"github.com/fraeso/smiskis/monitor"
 	"github.com/fraeso/smiskis/repository"
 	srv "github.com/fraeso/smiskis/server/http"
 
@@ -51,6 +52,9 @@ func main() {
 			log.Fatalf("HTTP server failed: %v", err)
 		}
 	}()
+
+	// start fire monitoring service in a goroutine (uses separate connection for LISTEN)
+	go monitor.StartFireMonitor(dsn)
 
 	// run simulation to continuously generate and write sensor data to db
 	//
