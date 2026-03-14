@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Image, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -10,7 +10,7 @@ import NetworkOverview from '../../components/network-overview';
 import StatCard from '../../components/stat-card';
 import { activeAlert, Alert } from '../../constants/dummy-data';
 import { useSensors } from '../../services/sensor-context';
-import { colors, spacing, radius, font } from '../../constants/theme';
+import { colors, spacing, radius, typography, shadows } from '../../constants/theme';
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
@@ -20,17 +20,17 @@ const CHART_WIDTH = width - spacing.xl * 2 - spacing.lg * 2;
 
 const riskColor: Record<string, string> = {
   critical: colors.critical,
-  elevated: colors.elevated,
-  normal: colors.normal,
+  high: colors.high,
+  moderate: colors.moderate,
+  low: colors.low,
 };
 
-
-// Generate 24hr trend data in gifted-charts format
+// Generate 24hr trend data
 const generateTrend = (base: number, variance: number, points = 24) =>
   Array.from({ length: points }, (_, i) => ({
     value: parseFloat((base + Math.sin(i * 0.5) * variance * 0.5 + (Math.random() - 0.5) * variance).toFixed(1)),
     label: i % 6 === 0 ? ['1pm', '7pm', '1am', '7am'][i / 6] : '',
-    labelTextStyle: { color: colors.textMuted, fontSize: 9 },
+    labelTextStyle: { color: colors.labelTertiary, fontSize: 9 },
   }));
 
 type ChartConfig = {
@@ -41,10 +41,10 @@ type ChartConfig = {
 };
 
 const charts: ChartConfig[] = [
-  { key: 'temperature', label: 'TEMPERATURE (°C)', unit: '°C', color: colors.tempColor },
-  { key: 'humidity', label: 'HUMIDITY (%)', unit: '%', color: colors.humidityColor },
-  { key: 'voc', label: 'VOC LEVEL (PPB)', unit: 'ppb', color: colors.vocColor },
-  { key: 'aqi', label: 'AIR QUALITY INDEX', unit: 'AQI', color: colors.aqiColor },
+  { key: 'temperature', label: 'Temperature', unit: '°C', color: colors.tempColor },
+  { key: 'humidity', label: 'Humidity', unit: '%', color: colors.humidityColor },
+  { key: 'voc', label: 'VOC Level', unit: 'ppb', color: colors.vocColor },
+  { key: 'aqi', label: 'Air Quality', unit: 'AQI', color: colors.aqiColor },
 ];
 
 function TrendChart({ config, data }: { config: ChartConfig; data: { value: number; label: string; labelTextStyle: any }[] }) {
@@ -55,46 +55,47 @@ function TrendChart({ config, data }: { config: ChartConfig; data: { value: numb
   return (
     <View style={styles.chartCard}>
       <View style={styles.chartHeader}>
-        <Text style={styles.chartLabel}>{config.label}</Text>
+        <Text style={styles.chartTitle}>{config.label}</Text>
         <Text style={[styles.chartValue, { color: config.color }]}>
-          {latest}<Text style={styles.chartUnit}> {config.unit}</Text>
+          {latest}
+          <Text style={styles.chartUnit}> {config.unit}</Text>
         </Text>
       </View>
 
       <LineChart
         data={data}
         width={CHART_WIDTH}
-        height={100}
+        height={120}
         color={config.color}
-        thickness={2}
+        thickness={2.5}
         areaChart
         startFillColor={config.color}
         endFillColor={config.color}
-        startOpacity={0.15}
-        endOpacity={0.01}
+        startOpacity={0.2}
+        endOpacity={0.02}
         backgroundColor="transparent"
         noOfSections={3}
         maxValue={Math.ceil((max * 1.15) / 10) * 10}
         yAxisColor="transparent"
-        xAxisColor={colors.border}
-        yAxisTextStyle={{ color: colors.textMuted, fontSize: 9 }}
-        yAxisLabelWidth={28}
+        xAxisColor={colors.separator}
+        yAxisTextStyle={{ color: colors.labelTertiary, fontSize: 10 }}
+        yAxisLabelWidth={32}
         initialSpacing={0}
         endSpacing={0}
         hideDataPoints
         curved
-        rulesColor={colors.border}
-        rulesType="dashed"
+        rulesColor={colors.separator}
+        rulesType="solid"
         yAxisThickness={0}
-        xAxisThickness={1}
+        xAxisThickness={StyleSheet.hairlineWidth}
         pointerConfig={{
-          pointerStripHeight: 80,
-          pointerStripColor: colors.border,
-          pointerStripWidth: 1,
+          pointerStripHeight: 100,
+          pointerStripColor: colors.separator,
+          pointerStripWidth: 1.5,
           pointerColor: config.color,
-          radius: 4,
+          radius: 5,
           pointerLabelWidth: 80,
-          pointerLabelHeight: 38,
+          pointerLabelHeight: 42,
           activatePointersOnLongPress: false,
           autoAdjustPointerLabelPosition: true,
           pointerLabelComponent: (items: any[]) => (
@@ -107,9 +108,20 @@ function TrendChart({ config, data }: { config: ChartConfig; data: { value: numb
       />
 
       <View style={styles.chartFooter}>
-        <Text style={styles.chartStat}>Min: <Text style={{ color: colors.textSecondary }}>{min.toFixed(1)}</Text></Text>
-        <Text style={styles.chartStat}>Max: <Text style={{ color: colors.textSecondary }}>{max.toFixed(1)}</Text></Text>
-        <Text style={styles.chartStat}>Avg: <Text style={{ color: config.color }}>{((max + min) / 2).toFixed(1)}</Text></Text>
+        <View style={styles.chartStat}>
+          <Text style={styles.chartStatLabel}>Min</Text>
+          <Text style={styles.chartStatValue}>{min.toFixed(1)}</Text>
+        </View>
+        <View style={styles.chartStat}>
+          <Text style={styles.chartStatLabel}>Avg</Text>
+          <Text style={[styles.chartStatValue, { color: config.color }]}>
+            {((max + min) / 2).toFixed(1)}
+          </Text>
+        </View>
+        <View style={styles.chartStat}>
+          <Text style={styles.chartStatLabel}>Max</Text>
+          <Text style={styles.chartStatValue}>{max.toFixed(1)}</Text>
+        </View>
       </View>
     </View>
   );
@@ -137,42 +149,69 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.logoContainer}>
-              <Image source={require('../../assets/images/react-logo.png')} style={{ width: 20, height: 20 }} />
-            </View>
-            <Text style={styles.appName}>AEROSAFE</Text>
-          </View>
-          {/* <View style={styles.liveIndicator}>
+          <Text style={styles.headerTitle}>Dashboard</Text>
+          <TouchableOpacity style={styles.liveIndicator}>
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>Live</Text>
-          </View> */}
+          </TouchableOpacity>
         </View>
 
-        <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
+        {/* Alert Banner */}
+        {alert && <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />}
+
+        {/* Network Overview */}
         <NetworkOverview stats={networkStats} />
 
+        {/* Stats Grid */}
         <View style={styles.statsGrid}>
-          <StatCard icon="thermometer" label="AVG TEMP" value={environmentalStats.avgTemp} unit="°C" accentColor={colors.tempColor} />
-          <StatCard icon="water" label="AVG HUMIDITY" value={environmentalStats.avgHumidity} unit="%" accentColor={colors.humidityColor} />
-          <StatCard icon="cloud" label="MAX VOC" value={environmentalStats.maxVOC} unit="ppb" accentColor={colors.vocColor} />
-          <StatCard icon="warning" label="MAX RISK" value={environmentalStats.maxRisk} unit="/100" accentColor={colors.critical} />
+          <StatCard
+            icon="thermometer"
+            label="AVG TEMP"
+            value={environmentalStats.avgTemp}
+            unit="°C"
+            accentColor={colors.tempColor}
+          />
+          <StatCard
+            icon="water"
+            label="HUMIDITY"
+            value={environmentalStats.avgHumidity}
+            unit="%"
+            accentColor={colors.humidityColor}
+          />
+          <StatCard
+            icon="cloud"
+            label="MAX VOC"
+            value={environmentalStats.maxVOC}
+            unit="ppb"
+            accentColor={colors.vocColor}
+          />
+          <StatCard
+            icon="warning"
+            label="MAX RISK"
+            value={environmentalStats.maxRisk}
+            unit="/100"
+            accentColor={colors.critical}
+          />
         </View>
 
         {/* Map Preview */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>RISK MAP</Text>
-        </View>
-
-        <TouchableOpacity style={styles.mapPreviewContainer} onPress={() => router.navigate('/(tabs)/map')} activeOpacity={0.9}>
+        <Text style={styles.sectionTitle}>Risk Map</Text>
+        <TouchableOpacity
+          style={styles.mapPreviewContainer}
+          onPress={() => router.navigate('/(tabs)/map')}
+          activeOpacity={0.95}
+        >
           <MapboxGL.MapView
             style={styles.mapPreview}
-            styleURL="mapbox://styles/mapbox/dark-v11"
+            styleURL="mapbox://styles/mapbox/light-v11"
             logoEnabled={false}
             attributionEnabled={false}
             scrollEnabled={false}
@@ -180,69 +219,209 @@ export default function DashboardScreen() {
             rotateEnabled={false}
             pitchEnabled={false}
           >
-            <MapboxGL.Camera zoomLevel={5.5} centerCoordinate={[145.0, -37.5]} animationDuration={0} />
+            <MapboxGL.Camera
+              zoomLevel={5.5}
+              centerCoordinate={[145.0, -37.5]}
+              animationDuration={0}
+            />
             <MapboxGL.ShapeSource id="dash-sensors" shape={dashSensorGeoJSON}>
               <MapboxGL.CircleLayer
                 id="dash-dots"
                 sourceID="dash-sensors"
                 style={{
                   circleRadius: 5,
-                  circleColor: ['match', ['get', 'riskLevel'], 'critical', riskColor.critical, 'elevated', riskColor.elevated, riskColor.normal] as any,
+                  circleColor: [
+                    'match',
+                    ['get', 'riskLevel'],
+                    'critical', riskColor.critical,
+                    'high', riskColor.high,
+                    'moderate', riskColor.moderate,
+                    riskColor.low
+                  ] as any,
                   circleOpacity: 1,
                   circleStrokeWidth: 1.5,
-                  circleStrokeColor: '#0a0c0f',
+                  circleStrokeColor: '#FFFFFF',
                 }}
               />
             </MapboxGL.ShapeSource>
           </MapboxGL.MapView>
           <View style={styles.mapOverlay}>
-            <Ionicons name="expand" size={14} color={colors.textSecondary} />
+            <Ionicons name="expand" size={16} color="#FFFFFF" />
             <Text style={styles.mapOverlayText}>Tap to expand</Text>
           </View>
         </TouchableOpacity>
 
         {/* 24hr Trends */}
-        <View style={[styles.sectionHeader, { marginTop: spacing.sm }]}>
-          <Text style={styles.sectionTitle}>24-HOUR TRENDS</Text>
-          <Text style={styles.sectionSubtitle}>Avg across all sensors</Text>
-        </View>
+        <Text style={styles.sectionTitle}>24-Hour Trends</Text>
+        <Text style={styles.sectionSubtitle}>Average across all sensors</Text>
 
         {charts.map((chart) => (
           <TrendChart key={chart.key} config={chart} data={trendData[chart.key]} />
         ))}
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  scroll: { flex: 1 },
-  content: { padding: spacing.xl, paddingBottom: spacing.xxl * 2 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  logoContainer: { width: 35, height: 35, alignItems: 'center', justifyContent: 'center' },
-  appName: { color: colors.textPrimary, fontSize: font.xl, fontWeight: '700', letterSpacing: 0.5 },
-  liveIndicator: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 4 },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.normal },
-  liveText: { color: colors.normal, fontSize: font.xs, fontWeight: '600' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.xl },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
-  sectionTitle: { color: colors.textMuted, fontSize: font.xs, fontWeight: '700', letterSpacing: 0.8 },
-  sectionSubtitle: { color: colors.textMuted, fontSize: font.xs },
-  mapPreviewContainer: { height: 200, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
-  mapPreview: { flex: 1 },
-  mapOverlay: { position: 'absolute', bottom: spacing.sm, right: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(17,20,24,0.85)', borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, paddingVertical: 4 },
-  mapOverlayText: { color: colors.textSecondary, fontSize: font.xs },
-  chartCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md, overflow: 'hidden' },
-  chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  chartLabel: { color: colors.textMuted, fontSize: font.xs, fontWeight: '700', letterSpacing: 0.8 },
-  chartValue: { fontSize: font.xl, fontWeight: '700' },
-  chartUnit: { fontSize: font.sm, fontWeight: '400', color: colors.textSecondary },
-  chartFooter: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.sm },
-  chartStat: { color: colors.textMuted, fontSize: font.xs },
-  tooltip: { backgroundColor: colors.bgCard, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, alignItems: 'center' },
-  tooltipValue: { fontSize: font.md, fontWeight: '700' },
-  tooltipUnit: { color: colors.textMuted, fontSize: font.xs },
+  safe: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    padding: spacing.md,
+    paddingBottom: spacing.xxxl + spacing.xl,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xs,
+  },
+  headerTitle: {
+    fontSize: typography.size.largeTitle,
+    fontWeight: typography.weight.bold,
+    color: colors.label,
+    letterSpacing: -0.8,
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.lowBg,
+    borderRadius: radius.round,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.low,
+  },
+  liveText: {
+    color: colors.low,
+    fontSize: typography.size.footnote,
+    fontWeight: typography.weight.semibold,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: typography.size.title3,
+    fontWeight: typography.weight.bold,
+    color: colors.label,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.xs,
+  },
+  sectionSubtitle: {
+    fontSize: typography.size.footnote,
+    fontWeight: typography.weight.regular,
+    color: colors.labelSecondary,
+    marginBottom: spacing.md,
+    marginTop: -spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  mapPreviewContainer: {
+    height: 240,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+    backgroundColor: colors.bgCard,
+    ...shadows.md,
+  },
+  mapPreview: {
+    flex: 1,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    bottom: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  mapOverlayText: {
+    color: '#FFFFFF',
+    fontSize: typography.size.footnote,
+    fontWeight: typography.weight.medium,
+  },
+  chartCard: {
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  chartTitle: {
+    fontSize: typography.size.headline,
+    fontWeight: typography.weight.semibold,
+    color: colors.label,
+  },
+  chartValue: {
+    fontSize: typography.size.title2,
+    fontWeight: typography.weight.bold,
+    lineHeight: typography.lineHeight.title2,
+  },
+  chartUnit: {
+    fontSize: typography.size.subheadline,
+    fontWeight: typography.weight.regular,
+    color: colors.labelSecondary,
+  },
+  chartFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: spacing.md,
+    marginTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.separator,
+  },
+  chartStat: {
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  chartStatLabel: {
+    fontSize: typography.size.caption1,
+    fontWeight: typography.weight.medium,
+    color: colors.labelTertiary,
+  },
+  chartStatValue: {
+    fontSize: typography.size.callout,
+    fontWeight: typography.weight.semibold,
+    color: colors.label,
+  },
+  tooltip: {
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    alignItems: 'center',
+    ...shadows.md,
+  },
+  tooltipValue: {
+    fontSize: typography.size.callout,
+    fontWeight: typography.weight.bold,
+  },
+  tooltipUnit: {
+    fontSize: typography.size.caption2,
+    fontWeight: typography.weight.medium,
+    color: colors.labelSecondary,
+    marginTop: spacing.xxs,
+  },
 });

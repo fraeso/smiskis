@@ -21,7 +21,7 @@ type SensorsContextType = {
   refresh: () => void;
 };
 
-const POLL_INTERVAL = 5 * 60 * 1000;
+const POLL_INTERVAL = 0.5 * 60 * 1000;
 
 const SensorsContext = createContext<SensorsContextType>({
   sensors: [],
@@ -30,7 +30,7 @@ const SensorsContext = createContext<SensorsContextType>({
   lastUpdated: null,
   networkStats: { critical: 0, high: 0, moderate: 0, low: 0 },
   environmentalStats: { avgTemp: 0, avgHumidity: 0, maxVOC: 0, maxRisk: 0 },
-  refresh: () => {},
+  refresh: () => { },
 });
 
 export function SensorsProvider({ children }: { children: React.ReactNode }) {

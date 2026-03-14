@@ -1,8 +1,9 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, font } from '../../constants/theme';
+import { colors, typography, spacing } from '../../constants/theme';
+
 type TabIconProps = {
   name: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -12,8 +13,20 @@ type TabIconProps = {
 function TabIcon({ name, label, focused }: TabIconProps): React.ReactElement {
   return (
     <View style={styles.tabItem}>
-      <Ionicons name={name} size={22} color={focused ? colors.accent : colors.textMuted} />
-      <Text numberOfLines={1} style={[styles.tabLabel, focused && styles.tabLabelFocused]}>{label}</Text>
+      <Ionicons
+        name={name}
+        size={24}
+        color={focused ? colors.accent : colors.labelTertiary}
+      />
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.tabLabel,
+          focused && styles.tabLabelFocused
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -47,7 +60,7 @@ export default function TabLayout() {
         name="sensors"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'radio' : 'radio-outline'} label="Sensors" focused={focused} />
+            <TabIcon name={focused ? 'radio' : 'radio-outline'} label="Zones" focused={focused} />
           ),
         }}
       />
@@ -65,14 +78,27 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.bgCard,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    height: 70,
-    paddingBottom: 10,
-    paddingTop: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)', // iOS blur effect simulation
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.separator,
+    height: Platform.OS === 'ios' ? 84 : 70,
+    paddingBottom: Platform.OS === 'ios' ? spacing.lg : spacing.sm,
+    paddingTop: spacing.sm,
   },
-  tabItem: { alignItems: 'center', gap: 3 },
-  tabLabel: { color: colors.textMuted, fontSize: 7, fontWeight: '500' },
-  tabLabelFocused: { color: colors.accent, fontWeight: '700' },
+  tabItem: {
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingTop: spacing.xxs,
+    minWidth: 60,
+  },
+  tabLabel: {
+    color: colors.labelTertiary,
+    fontSize: typography.size.caption2,
+    fontWeight: typography.weight.medium,
+    textAlign: 'center',
+  },
+  tabLabelFocused: {
+    color: colors.accent,
+    fontWeight: typography.weight.semibold,
+  },
 });

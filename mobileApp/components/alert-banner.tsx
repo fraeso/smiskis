@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius, font } from '../constants/theme';
+import { colors, spacing, radius, typography, shadows } from '../constants/theme';
 
 type Alert = {
   title: string;
@@ -15,8 +15,8 @@ export default function AlertBanner({ alert, onDismiss }: { alert: Alert | null;
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 0.3, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.4, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
       ])
     ).start();
   }, []);
@@ -30,14 +30,14 @@ export default function AlertBanner({ alert, onDismiss }: { alert: Alert | null;
           <Animated.View style={[styles.pulsingDot, { opacity: pulse }]} />
           <Text style={styles.title}>{alert.title}</Text>
         </View>
-        <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="close" size={16} color={colors.textMuted} />
+        <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Ionicons name="close-circle" size={22} color={colors.labelTertiary} />
         </TouchableOpacity>
       </View>
       <Text style={styles.description}>{alert.description}</Text>
-      <TouchableOpacity style={styles.callRow}>
-        <Ionicons name="call" size={14} color={colors.critical} />
-        <Text style={styles.callText}>{alert.callToAction}</Text>
+      <TouchableOpacity style={styles.actionButton}>
+        <Ionicons name="call" size={16} color="#FFFFFF" />
+        <Text style={styles.actionText}>{alert.callToAction}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -45,12 +45,13 @@ export default function AlertBanner({ alert, onDismiss }: { alert: Alert | null;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.criticalBg,
-    borderWidth: 1,
-    borderColor: colors.criticalBorder,
-    borderRadius: radius.lg,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.xl,
     padding: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.critical,
+    ...shadows.md,
   },
   header: {
     flexDirection: 'row',
@@ -60,43 +61,45 @@ const styles = StyleSheet.create({
   },
   iconRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flex: 1,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   pulsingDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: colors.critical,
-    marginTop: 3,
   },
   title: {
-    color: colors.critical,
-    fontSize: font.md,
-    fontWeight: '700',
+    color: colors.label,
+    fontSize: typography.size.headline,
+    fontWeight: typography.weight.bold,
     flex: 1,
-    lineHeight: 20,
-  },
-  dismiss: {
-    color: colors.textMuted,
-    fontSize: font.md,
-    marginLeft: spacing.sm,
+    lineHeight: typography.lineHeight.headline,
   },
   description: {
-    color: colors.textSecondary,
-    fontSize: font.sm,
-    lineHeight: 18,
+    color: colors.labelSecondary,
+    fontSize: typography.size.subheadline,
+    lineHeight: typography.lineHeight.subheadline,
     marginBottom: spacing.md,
+    marginLeft: spacing.lg + spacing.md,
   },
-  callRow: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.critical,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    marginLeft: spacing.lg + spacing.md,
+    alignSelf: 'flex-start',
   },
-  callText: {
-    color: colors.critical,
-    fontSize: font.sm,
-    fontWeight: '600',
+  actionText: {
+    color: '#FFFFFF',
+    fontSize: typography.size.callout,
+    fontWeight: typography.weight.semibold,
   },
 });

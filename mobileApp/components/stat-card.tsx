@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius, font } from '../constants/theme';
+import { colors, spacing, radius, typography, shadows } from '../constants/theme';
 
 type Props = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -15,7 +15,7 @@ export default function StatCard({ icon, label, value, unit, accentColor }: Prop
   return (
     <View style={styles.card}>
       <View style={styles.labelRow}>
-        <Ionicons name={icon} size={14} color={accentColor ?? colors.textMuted} />
+        <Ionicons name={icon} size={18} color={accentColor ?? colors.labelTertiary} />
         <Text style={styles.label}>{label}</Text>
       </View>
       <View style={styles.valueRow}>
@@ -28,40 +28,40 @@ export default function StatCard({ icon, label, value, unit, accentColor }: Prop
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.bgCardAlt,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.lg,
     padding: spacing.md,
     flex: 1,
     minWidth: '47%',
+    ...shadows.sm,
   },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   label: {
-    color: colors.textMuted,
-    fontSize: font.xs,
-    fontWeight: '600',
-    letterSpacing: 0.8,
+    color: colors.labelSecondary,
+    fontSize: typography.size.footnote,
+    fontWeight: typography.weight.semibold,
+    letterSpacing: 0.2,
     textTransform: 'uppercase',
   },
   valueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 3,
+    gap: spacing.xs,
   },
   value: {
-    color: colors.textPrimary,
-    fontSize: font.xxl,
-    fontWeight: '700',
+    color: colors.label,
+    fontSize: typography.size.title1,
+    fontWeight: typography.weight.bold,
+    lineHeight: typography.lineHeight.title1,
   },
   unit: {
-    color: colors.textSecondary,
-    fontSize: font.sm,
-    fontWeight: '500',
+    color: colors.labelSecondary,
+    fontSize: typography.size.callout,
+    fontWeight: typography.weight.medium,
   },
 });

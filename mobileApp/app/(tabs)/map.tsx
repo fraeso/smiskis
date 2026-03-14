@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import MapboxGL from '@rnmapbox/maps';
 import { useSensors, SensorReading } from '../../services/sensor-context';
-import { colors, font, spacing, radius } from '../../constants/theme';
+import { colors, font, spacing, radius, shadows } from '../../constants/theme';
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
@@ -202,7 +202,7 @@ export default function MapScreen() {
       <View style={styles.mapContainer}>
         <MapboxGL.MapView
           style={styles.map}
-          styleURL="mapbox://styles/mapbox/dark-v11"
+          styleURL="mapbox://styles/mapbox/light-v11"
           logoEnabled={false}
           attributionEnabled={false}
           onPress={() => setSelectedSensorId(null)}
@@ -309,7 +309,7 @@ export default function MapScreen() {
                 circleColor: ['get', 'dotColor'] as any,
                 circleOpacity: 1,
                 circleStrokeWidth: 2,
-                circleStrokeColor: '#0a0c0f',
+                circleStrokeColor: '#FFFFFF',
               }}
             />
           </MapboxGL.ShapeSource>
@@ -445,26 +445,25 @@ const styles = StyleSheet.create({
   colorFilterBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: radius.round,
+    backgroundColor: '#FFFFFF',
+    ...shadows.sm,
   },
-  colorFilterBtnActive: { borderColor: colors.accent, backgroundColor: colors.bgCard },
-  colorFilterText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '500' },
-  colorFilterTextActive: { color: colors.accent, fontWeight: '700' },
+  colorFilterBtnActive: { backgroundColor: colors.accent },
+  colorFilterText: { color: colors.textSecondary, fontSize: font.xs, fontWeight: '600' },
+  colorFilterTextActive: { color: '#FFFFFF', fontWeight: '700' },
 
   // ── Bottom left: legend ──
   legend: {
     position: 'absolute',
     bottom: 32,
     left: spacing.lg,
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    width: 128,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
     padding: spacing.md,
     gap: spacing.sm,
+    ...shadows.md,
   },
   legendTitle: { color: colors.textMuted, fontSize: font.xs, fontWeight: '700', letterSpacing: 0.8, marginBottom: 2 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -481,11 +480,10 @@ const styles = StyleSheet.create({
   },
   segmented: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
     overflow: 'hidden',
+    ...shadows.md,
   },
   segBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   segBtnActive: { backgroundColor: colors.bg },
@@ -495,20 +493,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.round,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+    ...shadows.md,
   },
   sensorPillText: { color: colors.textSecondary, fontSize: font.sm, fontWeight: '600' },
 
   // ── Loading & callout ──
   loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.5)' },
-  loadingCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl, alignItems: 'center', gap: spacing.md },
+  loadingCard: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center', gap: spacing.md, ...shadows.lg },
   loadingText: { color: colors.textSecondary, fontSize: font.md, fontWeight: '600' },
-  callout: { position: 'absolute', bottom: spacing.xl * 3, left: spacing.lg, right: spacing.lg, backgroundColor: 'rgba(255,255,255,0.98)', borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  callout: { position: 'absolute', bottom: spacing.xl * 3, left: spacing.lg, right: spacing.lg, backgroundColor: '#FFFFFF', borderRadius: radius.xl, overflow: 'hidden', ...shadows.lg },
   calloutAccent: { height: 3, width: '100%' },
   calloutHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, padding: spacing.lg, paddingBottom: 0 },
   calloutDot: { width: 8, height: 8, borderRadius: 4 },
