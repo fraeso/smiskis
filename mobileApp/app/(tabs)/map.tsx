@@ -10,14 +10,12 @@ import { colors, font, spacing, radius, shadows } from '../../constants/theme';
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
-// Temperature (20-45°C) to heatmap weight (0.1-1.0)
 const tempToWeight = (temp: number) => {
   const clamped = Math.min(Math.max(temp, 20), 45);
   return parseFloat(((clamped - 20) / 25).toFixed(2));
 };
 const aqiToBaseRadius = (aqi: number) => Math.round(8 + (Math.min(Math.max(aqi, 0), 500) / 500) * 42);
 
-// ─── GeoJSON builders (now functions, called with live data) ──
 const KM_LAT = 1 / 110.574;
 
 const organicPolygon = (lat: number, lng: number, km: number, id: string, pts = 32): number[][] => {
@@ -45,7 +43,6 @@ const riskColorMap: Record<string, string> = {
 
 type DotColorMode = 'risk' | 'temperature' | 'humidity' | 'voc' | 'aqi';
 
-// Map a reading value to a colour on a gradient
 const valueToColor = (value: number, min: number, max: number): string => {
   const t = Math.min(Math.max((value - min) / (max - min), 0), 1);
   if (t < 0.33) return colors.low;
@@ -77,31 +74,23 @@ export default function MapScreen() {
   const calloutAnim = useRef(new Animated.Value(0)).current;
   const hasFitBounds = useRef(false);
 
-  // Derive selected sensor from live data — always up to date after polls
   const selectedSensor = selectedSensorId
     ? sensors.find(s => s.sensorId === selectedSensorId) ?? null
     : null;
 
-  // Auto-fit camera to sensor bounds once data loads
   useEffect(() => {
     if (sensors.length === 0 || hasFitBounds.current) return;
     const lats = sensors.map(s => s.location.lat);
     const lngs = sensors.map(s => s.location.lng);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
     const pad = 0.5;
     cameraRef.current?.fitBounds(
-      [maxLng + pad, maxLat + pad],
-      [minLng - pad, minLat - pad],
-      100,
-      800,
+      [Math.max(...lngs) + pad, Math.max(...lats) + pad],
+      [Math.min(...lngs) - pad, Math.min(...lats) - pad],
+      100, 800,
     );
     hasFitBounds.current = true;
   }, [sensors]);
 
-  // Build GeoJSON from live sensor data
   const pointGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => ({
     type: 'FeatureCollection',
     features: sensors.map((s) => ({
@@ -134,7 +123,6 @@ export default function MapScreen() {
     })),
   }), [sensors]);
 
-  // Animate callout in/out
   useEffect(() => {
     Animated.spring(calloutAnim, {
       toValue: selectedSensor ? 1 : 0,
@@ -144,8 +132,7 @@ export default function MapScreen() {
     }).start();
   }, [selectedSensor]);
 
-  // Rebuild dot GeoJSON when colour mode changes — adds dotColor per feature
-  const coloredPointGeoJSON: GeoJSON.FeatureCollection = {
+  const coloredPointGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => ({
     type: 'FeatureCollection',
     features: sensors.map((s) => ({
       type: 'Feature',
@@ -155,9 +142,8 @@ export default function MapScreen() {
         dotColor: getDotColor(s, dotColorMode),
       },
     })),
-  };
+  }), [sensors, dotColorMode, pointGeoJSON]);
 
-  // Fly to sensor if navigated from Sensors page
   useEffect(() => {
     if (params.sensorId && params.lat && params.lng) {
       const sensor = sensors.find(s => s.sensorId === params.sensorId);
@@ -287,7 +273,7 @@ export default function MapScreen() {
             </MapboxGL.ShapeSource>
           )}
 
-          {/* ── SENSOR DOTS — always visible ── */}
+          {/* ── SENSOR DOTS — always on top ── */}
           <MapboxGL.ShapeSource id="sensors-source" shape={coloredPointGeoJSON} onPress={handleSensorPress}>
             <MapboxGL.CircleLayer
               id="sensors-selected-ring"
@@ -302,20 +288,30 @@ export default function MapScreen() {
               }}
             />
             <MapboxGL.CircleLayer
+              id="sensors-shadow"
+              sourceID="sensors-source"
+              style={{
+                circleRadius: 13,
+                circleColor: '#000000',
+                circleOpacity: 0.12,
+                circleStrokeWidth: 0,
+              }}
+            />
+            <MapboxGL.CircleLayer
               id="sensors-dot"
               sourceID="sensors-source"
               style={{
-                circleRadius: 6,
+                circleRadius: 8,
                 circleColor: ['get', 'dotColor'] as any,
                 circleOpacity: 1,
-                circleStrokeWidth: 2,
+                circleStrokeWidth: 3,
                 circleStrokeColor: '#FFFFFF',
               }}
             />
           </MapboxGL.ShapeSource>
         </MapboxGL.MapView>
 
-        {/* ── TOP CONTROLS OVERLAY — colour filter pills only ── */}
+        {/* ── TOP CONTROLS ── */}
         <View style={styles.topControls}>
           <View style={styles.colorFilterRow}>
             {([
@@ -338,7 +334,7 @@ export default function MapScreen() {
           </View>
         </View>
 
-        {/* ── BOTTOM LEFT — Risk legend ── */}
+        {/* ── BOTTOM LEFT — legend ── */}
         <View style={styles.legend}>
           <Text style={styles.legendTitle}>{dotColorMode === 'risk' ? 'RISK LEVEL' : dotColorMode.toUpperCase()}</Text>
           {[
@@ -354,7 +350,7 @@ export default function MapScreen() {
           ))}
         </View>
 
-        {/* ── BOTTOM RIGHT — Heat/Zones toggles + Sensor pill ── */}
+        {/* ── BOTTOM RIGHT — toggles + pill ── */}
         <View style={styles.bottomRight}>
           <View style={styles.segmented}>
             <TouchableOpacity
@@ -372,14 +368,13 @@ export default function MapScreen() {
               <Text style={[styles.segText, showZones ? styles.segTextActive : undefined]}>Zones</Text>
             </TouchableOpacity>
           </View>
-
           <TouchableOpacity style={styles.sensorPill} onPress={resetCamera}>
             <Ionicons name="locate" size={12} color={colors.textSecondary} />
             <Text style={styles.sensorPillText}>{sensors.length} Sensors Active</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Loading overlay — first load only */}
+        {/* Loading */}
         {loading && (
           <View style={styles.loadingOverlay}>
             <View style={styles.loadingCard}>
@@ -389,16 +384,11 @@ export default function MapScreen() {
           </View>
         )}
 
-        {/* Sensor callout — animated slide up */}
+        {/* Callout */}
         {selectedSensor && (
           <Animated.View style={[styles.callout, {
             opacity: calloutAnim,
-            transform: [{
-              translateY: calloutAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [30, 0],
-              }),
-            }],
+            transform: [{ translateY: calloutAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
           }]}>
             <View style={[styles.calloutAccent, { backgroundColor: riskColorMap[selectedSensor.riskLevel] }]} />
             <View style={styles.calloutHeader}>
@@ -433,75 +423,25 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   mapContainer: { flex: 1, position: 'relative' },
   map: { flex: 1 },
-
-  // ── Top: colour filter pills only ──
-  topControls: {
-    position: 'absolute',
-    top: 90,
-    left: spacing.lg,
-    right: spacing.lg,
-  },
+  topControls: { position: 'absolute', top: 90, left: spacing.lg, right: spacing.lg },
   colorFilterRow: { flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' },
-  colorFilterBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.round,
-    backgroundColor: '#FFFFFF',
-    ...shadows.sm,
-  },
+  colorFilterBtn: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.round, backgroundColor: '#FFFFFF', ...shadows.sm },
   colorFilterBtnActive: { backgroundColor: colors.accent },
   colorFilterText: { color: colors.textSecondary, fontSize: font.xs, fontWeight: '600' },
   colorFilterTextActive: { color: '#FFFFFF', fontWeight: '700' },
-
-  // ── Bottom left: legend ──
-  legend: {
-    position: 'absolute',
-    bottom: 32,
-    left: spacing.lg,
-    width: 128,
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    gap: spacing.sm,
-    ...shadows.md,
-  },
+  legend: { position: 'absolute', bottom: 32, left: spacing.lg, width: 128, backgroundColor: '#FFFFFF', borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm, ...shadows.md },
   legendTitle: { color: colors.textMuted, fontSize: font.xs, fontWeight: '700', letterSpacing: 0.8, marginBottom: 2 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendLabel: { fontSize: font.sm, fontWeight: '500' },
-
-  // ── Bottom right: toggles + sensor pill ──
-  bottomRight: {
-    position: 'absolute',
-    bottom: 32,
-    right: spacing.lg,
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-  },
-  segmented: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    ...shadows.md,
-  },
+  bottomRight: { position: 'absolute', bottom: 32, right: spacing.lg, alignItems: 'flex-end', gap: spacing.sm },
+  segmented: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: radius.md, overflow: 'hidden', ...shadows.md },
   segBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   segBtnActive: { backgroundColor: colors.bg },
   segText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '600' },
   segTextActive: { color: colors.accent },
-  sensorPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.round,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    ...shadows.md,
-  },
+  sensorPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: '#FFFFFF', borderRadius: radius.round, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, ...shadows.md },
   sensorPillText: { color: colors.textSecondary, fontSize: font.sm, fontWeight: '600' },
-
-  // ── Loading & callout ──
   loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.5)' },
   loadingCard: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center', gap: spacing.md, ...shadows.lg },
   loadingText: { color: colors.textSecondary, fontSize: font.md, fontWeight: '600' },
