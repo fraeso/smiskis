@@ -19,8 +19,11 @@ RUN CGO_ENABLED=0 go build -v -o /app/server ./cmd/api
 # Use the "scratch" base image for the absolute smallest possible image
 FROM scratch
 
-# Copy only the compiled binary from the 'builder' stage
+# Copy the compiled binary from the 'builder' stage
 COPY --from=builder /app/server /server
+
+# Copy migration files
+COPY --from=builder /app/migrations /migrations
 
 # Command to run the executable when the container starts
 ENTRYPOINT ["/server"]
