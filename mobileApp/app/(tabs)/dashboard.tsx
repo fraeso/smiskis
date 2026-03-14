@@ -89,9 +89,13 @@ function TrendChart({ config }: { config: ChartConfig }) {
         endOpacity={0.01}
         backgroundColor="transparent"
         noOfSections={3}
+        maxValue={Math.ceil((max * 1.15) / 10) * 10}
         yAxisColor="transparent"
         xAxisColor={colors.border}
         yAxisTextStyle={{ color: colors.textMuted, fontSize: 9 }}
+        yAxisLabelWidth={28}
+        initialSpacing={0}
+        endSpacing={0}
         hideDataPoints
         curved
         rulesColor={colors.border}
@@ -142,10 +146,10 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.appName}>AEROSAFE</Text>
           </View>
-          <View style={styles.liveIndicator}>
+          {/* <View style={styles.liveIndicator}>
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>Live</Text>
-          </View>
+          </View> */}
         </View>
 
         <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />

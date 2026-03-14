@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -81,8 +81,21 @@ export default function MapScreen() {
   const [selectedSensor, setSelectedSensor] = useState<SelectedSensor>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
   const params = useLocalSearchParams<{ sensorId?: string; lat?: string; lng?: string }>();
+  const cameraRef = useRef<MapboxGL.Camera>(null);
+  const calloutAnim = useRef(new Animated.Value(0)).current;
 
-  const cameraRef = React.useRef<MapboxGL.Camera>(null);
+  // Animate callout in/out
+  useEffect(() => {
+    Animated.spring(calloutAnim, {
+      toValue: selectedSensor ? 1 : 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 10,
+    }).start();
+  }, [selectedSensor]);
+
+  // Build selected sensor GeoJSON for highlight ring — kept for future use
+  const _selectedGeoJSON = selectedSensor;
 
   // Fly to sensor if navigated from Sensors page
   useEffect(() => {
@@ -251,6 +264,20 @@ export default function MapScreen() {
               }}
             />
           </MapboxGL.ShapeSource>
+
+          {/* ── SELECTED SENSOR PIN ── */}
+          {selectedSensor && (
+            <MapboxGL.PointAnnotation
+              key={selectedSensor.sensorId}
+              id="selected-pin"
+              coordinate={[selectedSensor.location.lng, selectedSensor.location.lat]}
+            >
+              <View style={[styles.pin, {
+                borderColor: '#ffffff',
+                backgroundColor: 'rgba(255,255,255,0.15)',
+              }]} />
+            </MapboxGL.PointAnnotation>
+          )}
         </MapboxGL.MapView>
 
         {/* Legend */}
@@ -274,9 +301,18 @@ export default function MapScreen() {
           <Text style={styles.sensorPillText}>{sensors.length} Sensors Active</Text>
         </TouchableOpacity>
 
-        {/* Sensor callout */}
+        {/* Sensor callout — animated slide up */}
         {selectedSensor && (
-          <View style={styles.callout}>
+          <Animated.View style={[styles.callout, {
+            opacity: calloutAnim,
+            transform: [{
+              translateY: calloutAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [30, 0],
+              }),
+            }],
+          }]}>
+            <View style={[styles.calloutAccent, { backgroundColor: riskColorMap[selectedSensor.riskLevel] }]} />
             <View style={styles.calloutHeader}>
               <View style={[styles.calloutDot, { backgroundColor: riskColorMap[selectedSensor.riskLevel] }]} />
               <Text style={styles.calloutName}>{selectedSensor.location.name}</Text>
@@ -287,18 +323,18 @@ export default function MapScreen() {
             <Text style={styles.calloutAddress}>{selectedSensor.location.address}</Text>
             <View style={styles.calloutStats}>
               {[
-                { label: 'Temp', value: `${selectedSensor.readings.temperature}°C` },
-                { label: 'Humidity', value: `${selectedSensor.readings.humidity}%` },
-                { label: 'VOC', value: `${selectedSensor.readings.vocLevel} ppb` },
-                { label: 'AQI', value: `${selectedSensor.readings.airQualityIndex}` },
+                { label: 'Temp', value: `${selectedSensor.readings.temperature}°C`, color: colors.tempColor },
+                { label: 'Humidity', value: `${selectedSensor.readings.humidity}%`, color: colors.humidityColor },
+                { label: 'VOC', value: `${selectedSensor.readings.vocLevel} ppb`, color: colors.vocColor },
+                { label: 'AQI', value: `${selectedSensor.readings.airQualityIndex}`, color: selectedSensor.riskLevel === 'critical' ? colors.critical : selectedSensor.riskLevel === 'elevated' ? colors.elevated : colors.normal },
               ].map((stat) => (
                 <View key={stat.label} style={styles.calloutStat}>
-                  <Text style={styles.calloutStatValue}>{stat.value}</Text>
+                  <Text style={[styles.calloutStatValue, { color: stat.color }]}>{stat.value}</Text>
                   <Text style={styles.calloutStatLabel}>{stat.label}</Text>
                 </View>
               ))}
             </View>
-          </View>
+          </Animated.View>
         )}
       </View>
     </SafeAreaView>
@@ -324,12 +360,14 @@ const styles = StyleSheet.create({
   legendLabel: { fontSize: font.sm, fontWeight: '500' },
   sensorPill: { position: 'absolute', bottom: spacing.xl, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: 'rgba(17,20,24,0.93)', borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   sensorPillText: { color: colors.textSecondary, fontSize: font.sm, fontWeight: '600' },
-  callout: { position: 'absolute', bottom: spacing.xl * 3, left: spacing.lg, right: spacing.lg, backgroundColor: 'rgba(17,20,24,0.97)', borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg },
-  calloutHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  pin: { width: 24, height: 24, borderRadius: 12, borderWidth: 3 },
+  callout: { position: 'absolute', bottom: spacing.xl * 3, left: spacing.lg, right: spacing.lg, backgroundColor: 'rgba(17,20,24,0.97)', borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  calloutAccent: { height: 3, width: '100%' },
+  calloutHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, padding: spacing.lg, paddingBottom: 0 },
   calloutDot: { width: 8, height: 8, borderRadius: 4 },
   calloutName: { color: colors.textPrimary, fontSize: font.lg, fontWeight: '700', flex: 1 },
-  calloutAddress: { color: colors.textMuted, fontSize: font.xs, marginBottom: spacing.md },
-  calloutStats: { flexDirection: 'row', justifyContent: 'space-between' },
+  calloutAddress: { color: colors.textMuted, fontSize: font.xs, marginBottom: spacing.md, paddingHorizontal: spacing.lg },
+  calloutStats: { flexDirection: 'row', justifyContent: 'space-between', padding: spacing.lg, paddingTop: spacing.sm },
   calloutStat: { alignItems: 'center' },
   calloutStatValue: { color: colors.textPrimary, fontSize: font.md, fontWeight: '700' },
   calloutStatLabel: { color: colors.textMuted, fontSize: font.xs, marginTop: 2 },

@@ -3,7 +3,6 @@ import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, font } from '../../constants/theme';
-
 type TabIconProps = {
   name: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -13,7 +12,7 @@ type TabIconProps = {
 function TabIcon({ name, label, focused }: TabIconProps): React.ReactElement {
   return (
     <View style={styles.tabItem}>
-      <Ionicons name={name} size={22} color={focused ? colors.textPrimary : colors.textMuted} />
+      <Ionicons name={name} size={22} color={focused ? colors.accent : colors.textMuted} />
       <Text numberOfLines={1} style={[styles.tabLabel, focused && styles.tabLabelFocused]}>{label}</Text>
     </View>
   );
@@ -48,7 +47,7 @@ export default function TabLayout() {
         name="sensors"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'radio' : 'radio-outline'} label="Sensors" focused={focused} />
+            <TabIcon name={focused ? 'radio' : 'radio-outline'} label="Sensor" focused={focused} />
           ),
         }}
       />
@@ -75,5 +74,5 @@ const styles = StyleSheet.create({
   },
   tabItem: { alignItems: 'center', gap: 3 },
   tabLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '500' },
-  tabLabelFocused: { color: colors.textPrimary, fontWeight: '700' },
+  tabLabelFocused: { color: colors.accent, fontWeight: '700' },
 });

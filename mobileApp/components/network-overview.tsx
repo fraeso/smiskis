@@ -32,15 +32,10 @@ export default function NetworkOverview({ stats }: { stats: Stats }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.lg,
+    marginBottom: 12,
   },
   labelRow: {
     flexDirection: 'row',
