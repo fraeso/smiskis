@@ -407,18 +407,18 @@ func generateReading(sensorID string, timestamp time.Time, prevReading *SensorRe
 		humidity = math.Max(10.0, math.Min(98.0, humidity)) // Clamp 10-98%
 
 		// VOC: Can change more dramatically (smoke can appear quickly)
-		// 55% small change, 20% medium change, 25% large change/fire events
+		// 55% small change, 37% medium change, 8% large change/fire events
 		vocChange := 0
 		vocRand := rand.Float64()
 
 		if vocRand < 0.55 {
 			// Small change: ±5-30 ppb (normal drift)
 			vocChange = rand.Intn(60) - 30
-		} else if vocRand < 0.75 {
+		} else if vocRand < 0.92 {
 			// Medium change: ±50-200 ppb (smoke drifting in/out)
 			vocChange = rand.Intn(400) - 200
 		} else {
-			// Large change: fire events (25% chance)
+			// Large change: fire events (8% chance)
 			if vocLevel < 1200 {
 				// Fire starting or intensifying - dramatic increase
 				vocChange = 800 + rand.Intn(1700) // +800 to +2500 ppb (more intense)
@@ -432,30 +432,30 @@ func generateReading(sensorID string, timestamp time.Time, prevReading *SensorRe
 				humidity = math.Max(10.0, humidity)
 			} else if vocLevel > 2000 {
 				// Only clear if VOC is very high (fire sustained longer)
-				vocChange = -(200 + rand.Intn(400)) // -200 to -600 ppb (slower clearing)
+				vocChange = -(400 + rand.Intn(600)) // -400 to -1000 ppb (faster clearing)
 
-				// Temperature and humidity recover very slowly
-				temperature -= 1.0 + rand.Float64()*2.0
+				// Temperature and humidity recover slowly
+				temperature -= 2.0 + rand.Float64()*4.0
 				temperature = math.Max(8.0, temperature)
 
-				humidity += 2.0 + rand.Float64()*8.0
+				humidity += 5.0 + rand.Float64()*15.0
 				humidity = math.Min(98.0, humidity)
 			} else {
 				// Medium VOC (1200-2000): fire persists but can naturally extinguish
-				// 90% sustain, 10% start clearing (rain, wind change, firefighters)
-				// Average fire duration: ~50 minutes, some last hours
-				if rand.Float64() < 0.90 {
+				// 65% sustain, 35% start clearing (rain, wind change, firefighters)
+				// Average fire duration: ~30 minutes, some last hours
+				if rand.Float64() < 0.65 {
 					// Fire persists with small fluctuations
 					vocChange = rand.Intn(400) - 200 // ±200 ppb
 				} else {
 					// Natural extinguishing - significant drop
-					vocChange = -(400 + rand.Intn(600)) // -400 to -1000 ppb
+					vocChange = -(600 + rand.Intn(800)) // -600 to -1400 ppb
 
 					// Conditions improve (rain, wind change)
-					temperature -= 3.0 + rand.Float64()*5.0
+					temperature -= 4.0 + rand.Float64()*6.0
 					temperature = math.Max(8.0, temperature)
 
-					humidity += 10.0 + rand.Float64()*20.0
+					humidity += 15.0 + rand.Float64()*25.0
 					humidity = math.Min(98.0, humidity)
 				}
 			}
