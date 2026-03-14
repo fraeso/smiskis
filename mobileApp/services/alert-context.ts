@@ -26,7 +26,6 @@ const RECONNECT_DELAY = 3000;
 // Configure how notifications appear when app is foregrounded
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
     shouldShowBanner: true,
@@ -98,7 +97,13 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
       try {
         const alert: Alert = JSON.parse(event.data);
         console.log(`[AeroSafe] 📣 Alert received: ${alert.title} (${alert.severity})`);
-        setAlerts(prev => [alert, ...prev].slice(0, 100));
+        setAlerts(prev => {
+          const exists = prev.some(a => a.id === alert.id);
+          if (exists) return prev;
+          const updated = [alert, ...prev].slice(0, 100);
+          Notifications.setBadgeCountAsync(updated.length);
+          return updated;
+        });
         await showLocalNotification(alert);
       } catch (e) {
         console.warn('[AeroSafe] Failed to parse alert:', event.data);
@@ -129,7 +134,11 @@ export function AlertsProvider({ children }: { children: React.ReactNode }) {
   }, [connect]);
 
   const clearAlert = useCallback((id: string) => {
-    setAlerts(prev => prev.filter(a => a.id !== id));
+    setAlerts(prev => {
+      const updated = prev.filter(a => a.id !== id);
+      Notifications.setBadgeCountAsync(updated.length);
+      return updated;
+    });
   }, []);
 
   return React.createElement(
