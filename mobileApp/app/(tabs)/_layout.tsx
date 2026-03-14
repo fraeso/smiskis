@@ -1,30 +1,35 @@
-// @ts-nocheck
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../../constants/theme';
+import { useAlerts } from '../../services/alert-context';
 
 type TabIconProps = {
   name: keyof typeof Ionicons.glyphMap;
   label: string;
   focused: boolean;
+  badge?: number;
 };
 
-function TabIcon({ name, label, focused }: TabIconProps): React.ReactElement {
+function TabIcon({ name, label, focused, badge }: TabIconProps): React.ReactElement {
   return (
     <View style={styles.tabItem}>
-      <Ionicons
-        name={name}
-        size={24}
-        color={focused ? colors.accent : colors.labelTertiary}
-      />
+      <View style={styles.iconWrapper}>
+        <Ionicons
+          name={name}
+          size={24}
+          color={focused ? colors.accent : colors.labelTertiary}
+        />
+        {badge != null && badge > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+          </View>
+        )}
+      </View>
       <Text
         numberOfLines={1}
-        style={[
-          styles.tabLabel,
-          focused && styles.tabLabelFocused
-        ]}
+        style={[styles.tabLabel, focused ? styles.tabLabelFocused : undefined]}
       >
         {label}
       </Text>
@@ -33,6 +38,8 @@ function TabIcon({ name, label, focused }: TabIconProps): React.ReactElement {
 }
 
 export default function TabLayout() {
+  const { alerts } = useAlerts();
+
   return (
     <Tabs
       screenOptions={{
@@ -69,7 +76,12 @@ export default function TabLayout() {
         name="alerts"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'notifications' : 'notifications-outline'} label="Alerts" focused={focused} />
+            <TabIcon
+              name={focused ? 'notifications' : 'notifications-outline'}
+              label="Alerts"
+              focused={focused}
+              badge={alerts.length}
+            />
           ),
         }}
       />
@@ -79,7 +91,7 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: 'rgba(255, 255, 255, 0.94)', // iOS blur effect simulation
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.separator,
     height: Platform.OS === 'ios' ? 84 : 70,
@@ -91,6 +103,29 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
     paddingTop: spacing.xxs,
     minWidth: 60,
+  },
+  iconWrapper: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.critical,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.94)',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: typography.size.caption2,
+    fontWeight: typography.weight.bold,
+    lineHeight: 13,
   },
   tabLabel: {
     color: colors.labelTertiary,

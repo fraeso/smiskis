@@ -6,7 +6,7 @@ import { colors, spacing, radius, typography, shadows } from '../constants/theme
 type Alert = {
   title: string;
   description: string;
-  callToAction: string;
+  callToAction?: string;
 };
 
 export default function AlertBanner({ alert, onDismiss }: { alert: Alert | null; onDismiss: () => void }) {
@@ -35,10 +35,12 @@ export default function AlertBanner({ alert, onDismiss }: { alert: Alert | null;
         </TouchableOpacity>
       </View>
       <Text style={styles.description}>{alert.description}</Text>
-      <TouchableOpacity style={styles.actionButton}>
-        <Ionicons name="call" size={16} color="#FFFFFF" />
-        <Text style={styles.actionText}>{alert.callToAction}</Text>
-      </TouchableOpacity>
+      {alert.callToAction && (
+        <TouchableOpacity style={styles.actionButton}>
+          <Ionicons name="call" size={16} color="#FFFFFF" />
+          <Text style={styles.actionText}>{alert.callToAction}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

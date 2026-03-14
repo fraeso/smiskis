@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,8 +9,8 @@ import { LineChart } from 'react-native-gifted-charts';
 import AlertBanner from '../../components/alert-banner';
 import NetworkOverview from '../../components/network-overview';
 import StatCard from '../../components/stat-card';
-import { activeAlert, Alert } from '../../constants/dummy-data';
 import { useSensors } from '../../services/sensor-context';
+import { useAlerts } from '../../services/alert-context';
 import { colors, spacing, radius, typography, shadows } from '../../constants/theme';
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!;
@@ -130,7 +130,9 @@ function TrendChart({ config, data }: { config: ChartConfig; data: { value: numb
 
 export default function DashboardScreen() {
   const { sensors, networkStats, environmentalStats, loading } = useSensors();
-  const [alert, setAlert] = useState<Alert | null>(activeAlert);
+  const { alerts, clearAlert } = useAlerts();
+
+  const bannerAlert = alerts.find(a => a.severity === 'critical' || a.severity === 'high') ?? null;
 
   const trendData = useMemo(() => ({
     temperature: generateTrend(environmentalStats.avgTemp || 30, 6),
@@ -166,41 +168,17 @@ export default function DashboardScreen() {
         </View>
 
         {/* Alert Banner */}
-        {alert && <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />}
+        {bannerAlert && <AlertBanner alert={bannerAlert} onDismiss={() => clearAlert(bannerAlert.id)} />}
 
         {/* Network Overview */}
         <NetworkOverview stats={networkStats} />
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
-          <StatCard
-            icon="thermometer"
-            label="AVG TEMP"
-            value={environmentalStats.avgTemp}
-            unit="°C"
-            accentColor={colors.tempColor}
-          />
-          <StatCard
-            icon="water"
-            label="HUMIDITY"
-            value={environmentalStats.avgHumidity}
-            unit="%"
-            accentColor={colors.humidityColor}
-          />
-          <StatCard
-            icon="cloud"
-            label="MAX VOC"
-            value={environmentalStats.maxVOC}
-            unit="ppb"
-            accentColor={colors.vocColor}
-          />
-          <StatCard
-            icon="warning"
-            label="MAX RISK"
-            value={environmentalStats.maxRisk}
-            unit="/100"
-            accentColor={colors.critical}
-          />
+          <StatCard icon="thermometer" label="AVG TEMP" value={environmentalStats.avgTemp} unit="°C" accentColor={colors.tempColor} />
+          <StatCard icon="water" label="HUMIDITY" value={environmentalStats.avgHumidity} unit="%" accentColor={colors.humidityColor} />
+          <StatCard icon="cloud" label="MAX VOC" value={environmentalStats.maxVOC} unit="ppb" accentColor={colors.vocColor} />
+          <StatCard icon="warning" label="MAX RISK" value={environmentalStats.maxRisk} unit="/100" accentColor={colors.critical} />
         </View>
 
         {/* Map Preview */}
@@ -220,11 +198,7 @@ export default function DashboardScreen() {
             rotateEnabled={false}
             pitchEnabled={false}
           >
-            <MapboxGL.Camera
-              zoomLevel={5.5}
-              centerCoordinate={[145.0, -37.5]}
-              animationDuration={0}
-            />
+            <MapboxGL.Camera zoomLevel={5.5} centerCoordinate={[145.0, -37.5]} animationDuration={0} />
             <MapboxGL.ShapeSource id="dash-sensors" shape={dashSensorGeoJSON}>
               <MapboxGL.CircleLayer
                 id="dash-dots"
@@ -232,12 +206,11 @@ export default function DashboardScreen() {
                 style={{
                   circleRadius: 5,
                   circleColor: [
-                    'match',
-                    ['get', 'riskLevel'],
+                    'match', ['get', 'riskLevel'],
                     'critical', riskColor.critical,
                     'high', riskColor.high,
                     'moderate', riskColor.moderate,
-                    riskColor.low
+                    riskColor.low,
                   ] as any,
                   circleOpacity: 1,
                   circleStrokeWidth: 1.5,
@@ -265,164 +238,31 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: spacing.md,
-    paddingBottom: spacing.xxxl + spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.xs,
-  },
-  headerTitle: {
-    fontSize: typography.size.largeTitle,
-    fontWeight: typography.weight.bold,
-    color: colors.label,
-    letterSpacing: -0.8,
-  },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.lowBg,
-    borderRadius: radius.round,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.low,
-  },
-  liveText: {
-    color: colors.low,
-    fontSize: typography.size.footnote,
-    fontWeight: typography.weight.semibold,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: typography.size.title3,
-    fontWeight: typography.weight.bold,
-    color: colors.label,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.xs,
-  },
-  sectionSubtitle: {
-    fontSize: typography.size.footnote,
-    fontWeight: typography.weight.regular,
-    color: colors.labelSecondary,
-    marginBottom: spacing.md,
-    marginTop: -spacing.sm,
-    paddingHorizontal: spacing.xs,
-  },
-  mapPreviewContainer: {
-    height: 240,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    marginBottom: spacing.lg,
-    backgroundColor: colors.bgCard,
-    ...shadows.md,
-  },
-  mapPreview: {
-    flex: 1,
-  },
-  mapOverlay: {
-    position: 'absolute',
-    bottom: spacing.md,
-    right: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  mapOverlayText: {
-    color: '#FFFFFF',
-    fontSize: typography.size.footnote,
-    fontWeight: typography.weight.medium,
-  },
-  chartCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadows.sm,
-  },
-  chartHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  chartTitle: {
-    fontSize: typography.size.headline,
-    fontWeight: typography.weight.semibold,
-    color: colors.label,
-  },
-  chartValue: {
-    fontSize: typography.size.title2,
-    fontWeight: typography.weight.bold,
-    lineHeight: typography.lineHeight.title2,
-  },
-  chartUnit: {
-    fontSize: typography.size.subheadline,
-    fontWeight: typography.weight.regular,
-    color: colors.labelSecondary,
-  },
-  chartFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: spacing.md,
-    marginTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.separator,
-  },
-  chartStat: {
-    alignItems: 'center',
-    gap: spacing.xxs,
-  },
-  chartStatLabel: {
-    fontSize: typography.size.caption1,
-    fontWeight: typography.weight.medium,
-    color: colors.labelTertiary,
-  },
-  chartStatValue: {
-    fontSize: typography.size.callout,
-    fontWeight: typography.weight.semibold,
-    color: colors.label,
-  },
-  tooltip: {
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    alignItems: 'center',
-    ...shadows.md,
-  },
-  tooltipValue: {
-    fontSize: typography.size.callout,
-    fontWeight: typography.weight.bold,
-  },
-  tooltipUnit: {
-    fontSize: typography.size.caption2,
-    fontWeight: typography.weight.medium,
-    color: colors.labelSecondary,
-    marginTop: spacing.xxs,
-  },
+  safe: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flex: 1 },
+  content: { padding: spacing.md, paddingBottom: spacing.xxxl + spacing.xl },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.xs },
+  headerTitle: { fontSize: typography.size.largeTitle, fontWeight: typography.weight.bold, color: colors.label, letterSpacing: -0.8 },
+  liveIndicator: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.lowBg, borderRadius: radius.round, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.low },
+  liveText: { color: colors.low, fontSize: typography.size.footnote, fontWeight: typography.weight.semibold },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+  sectionTitle: { fontSize: typography.size.title3, fontWeight: typography.weight.bold, color: colors.label, marginBottom: spacing.md, paddingHorizontal: spacing.xs },
+  sectionSubtitle: { fontSize: typography.size.footnote, fontWeight: typography.weight.regular, color: colors.labelSecondary, marginBottom: spacing.md, marginTop: -spacing.sm, paddingHorizontal: spacing.xs },
+  mapPreviewContainer: { height: 240, borderRadius: radius.xl, overflow: 'hidden', marginBottom: spacing.lg, backgroundColor: colors.bgCard, ...shadows.md },
+  mapPreview: { flex: 1 },
+  mapOverlay: { position: 'absolute', bottom: spacing.md, right: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: 'rgba(0, 0, 0, 0.75)', borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  mapOverlayText: { color: '#FFFFFF', fontSize: typography.size.footnote, fontWeight: typography.weight.medium },
+  chartCard: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, ...shadows.sm },
+  chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  chartTitle: { fontSize: typography.size.headline, fontWeight: typography.weight.semibold, color: colors.label },
+  chartValue: { fontSize: typography.size.title2, fontWeight: typography.weight.bold, lineHeight: typography.lineHeight.title2 },
+  chartUnit: { fontSize: typography.size.subheadline, fontWeight: typography.weight.regular, color: colors.labelSecondary },
+  chartFooter: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: spacing.md, marginTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator },
+  chartStat: { alignItems: 'center', gap: spacing.xxs },
+  chartStatLabel: { fontSize: typography.size.caption1, fontWeight: typography.weight.medium, color: colors.labelTertiary },
+  chartStatValue: { fontSize: typography.size.callout, fontWeight: typography.weight.semibold, color: colors.label },
+  tooltip: { backgroundColor: colors.bgCard, borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center', ...shadows.md },
+  tooltipValue: { fontSize: typography.size.callout, fontWeight: typography.weight.bold },
+  tooltipUnit: { fontSize: typography.size.caption2, fontWeight: typography.weight.medium, color: colors.labelSecondary, marginTop: spacing.xxs },
 });
