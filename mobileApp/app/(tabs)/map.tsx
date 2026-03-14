@@ -297,7 +297,7 @@ export default function MapScreen() {
                 circleRadius: 14,
                 circleColor: 'transparent',
                 circleStrokeWidth: 2.5,
-                circleStrokeColor: '#ffffff',
+                circleStrokeColor: '#000000',
                 circleStrokeOpacity: 0.9,
               }}
             />
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.5)' },
   loadingCard: { backgroundColor: colors.bgCard, borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center', gap: spacing.md, ...shadows.lg },
   loadingText: { color: colors.textSecondary, fontSize: font.md, fontWeight: '600' },
-  callout: { position: 'absolute', bottom: spacing.xl * 3, left: spacing.lg, right: spacing.lg, backgroundColor: '#FFFFFF', borderRadius: radius.xl, overflow: 'hidden', ...shadows.lg },
+  callout: { position: 'absolute', bottom: spacing.xl * 5.5, left: spacing.lg, right: spacing.lg, backgroundColor: '#FFFFFF', borderRadius: radius.xl, overflow: 'hidden', ...shadows.lg },
   calloutAccent: { height: 3, width: '100%' },
   calloutHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, padding: spacing.lg, paddingBottom: 0 },
   calloutDot: { width: 8, height: 8, borderRadius: 4 },

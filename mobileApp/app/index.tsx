@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography, shadows } from '../constants/theme';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'react-native';
 
 export default function WelcomeScreen() {
   return (
@@ -11,19 +11,12 @@ export default function WelcomeScreen() {
       <View style={styles.content}>
         {/* Icon container with gradient background */}
         <View style={styles.iconContainer}>
-          <LinearGradient
-            colors={[colors.critical, colors.high]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconGradient}
-          >
-            <Ionicons name="shield-checkmark" size={56} color="#FFFFFF" />
-          </LinearGradient>
+          <Image source={require('../assets/images/react-logo.png')} style={{ width: 40, height: 40 }} />
         </View>
 
         {/* App branding */}
         <View style={styles.brandingContainer}>
-          <Text style={styles.appName}>AEROSAFE</Text>
+          <Text style={styles.appName}>AeroSafe</Text>
           <Text style={styles.tagline}>
             Real-time fire risk monitoring{'\n'}for your safety
           </Text>
@@ -116,8 +109,8 @@ const styles = StyleSheet.create({
   featureIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.fillTertiary,
+    // borderRadius: 20,
+    // backgroundColor: colors.fillTertiary,
     alignItems: 'center',
     justifyContent: 'center',
   },

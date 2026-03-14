@@ -160,7 +160,7 @@ export default function DashboardScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Dashboard</Text>
+          <Text style={styles.headerTitle}>AeroSafe</Text>
           <TouchableOpacity style={styles.liveIndicator}>
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>Live</Text>
