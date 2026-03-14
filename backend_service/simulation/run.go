@@ -205,7 +205,7 @@ func insertSensors(conn *sql.DB, sensors []Sensor) error {
 
 func backfillReadings(conn *sql.DB, sensors []Sensor, sensorStates map[string]*SensorReading) error {
 	now := time.Now()
-	startTime := now.AddDate(0, 0, -7) // 1 week prior
+	startTime := now.AddDate(0, 0, -1) // 1 day prior
 
 	log.Printf("Backfilling readings from %s to %s", startTime.Format(time.RFC3339), now.Format(time.RFC3339))
 
