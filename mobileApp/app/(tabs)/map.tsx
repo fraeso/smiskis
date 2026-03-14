@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   // ── Top: colour filter pills only ──
   topControls: {
     position: 'absolute',
-    top: 56,
+    top: 90,
     left: spacing.lg,
     right: spacing.lg,
   },
@@ -448,18 +448,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(17,20,24,0.93)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
   },
-  colorFilterBtnActive: { borderColor: colors.accent, backgroundColor: 'rgba(17,20,24,0.97)' },
+  colorFilterBtnActive: { borderColor: colors.accent, backgroundColor: colors.bgCard },
   colorFilterText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '500' },
   colorFilterTextActive: { color: colors.accent, fontWeight: '700' },
 
   // ── Bottom left: legend ──
   legend: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 32,
     left: spacing.lg,
-    backgroundColor: 'rgba(17,20,24,0.93)',
+    backgroundColor: 'rgba(255,255,255,0.97)',
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -474,28 +474,28 @@ const styles = StyleSheet.create({
   // ── Bottom right: toggles + sensor pill ──
   bottomRight: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 32,
     right: spacing.lg,
     alignItems: 'flex-end',
     gap: spacing.sm,
   },
   segmented: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(17,20,24,0.93)',
+    backgroundColor: 'rgba(255,255,255,0.97)',
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
   segBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  segBtnActive: { backgroundColor: colors.bgCardAlt },
+  segBtnActive: { backgroundColor: colors.bg },
   segText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '600' },
   segTextActive: { color: colors.accent },
   sensorPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: 'rgba(17,20,24,0.93)',
+    backgroundColor: 'rgba(255,255,255,0.97)',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
@@ -505,10 +505,10 @@ const styles = StyleSheet.create({
   sensorPillText: { color: colors.textSecondary, fontSize: font.sm, fontWeight: '600' },
 
   // ── Loading & callout ──
-  loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,12,15,0.6)' },
+  loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.5)' },
   loadingCard: { backgroundColor: colors.bgCard, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.xl, alignItems: 'center', gap: spacing.md },
   loadingText: { color: colors.textSecondary, fontSize: font.md, fontWeight: '600' },
-  callout: { position: 'absolute', bottom: spacing.xl * 3, left: spacing.lg, right: spacing.lg, backgroundColor: 'rgba(17,20,24,0.97)', borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  callout: { position: 'absolute', bottom: spacing.xl * 3, left: spacing.lg, right: spacing.lg, backgroundColor: 'rgba(255,255,255,0.98)', borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   calloutAccent: { height: 3, width: '100%' },
   calloutHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, padding: spacing.lg, paddingBottom: 0 },
   calloutDot: { width: 8, height: 8, borderRadius: 4 },

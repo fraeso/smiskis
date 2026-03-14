@@ -1,41 +1,47 @@
 export const colors = {
-  bg: '#0a0c0f',
-  bgCard: '#111418',
-  bgCardAlt: '#161a1f',
-  border: '#1e2328',
-  borderLight: '#252b33',
+  // ── Backgrounds ──────────────────────────────
+  bg: '#F8F8FF',           // ghost white
+  bgCard: '#FFFFFF',        // elevated card surface
+  bgCardAlt: '#F9F9F9',    // slightly off-white for nested surfaces
 
-  // 4 risk levels
-  critical: '#ff3b3b',
-  criticalBg: '#2a0f0f',
-  criticalBorder: '#4a1515',
+  // ── Borders ───────────────────────────────────
+  border: '#E5E5EA',        // iOS separator
+  borderLight: '#C7C7CC',   // iOS opaque separator (stronger)
 
-  high: '#ff6b35',
-  highBg: '#2a1508',
+  // ── Risk levels — Apple system palette ────────
+  critical: '#FF3B30',      // iOS red
+  criticalBg: '#FFF1F0',
+  criticalBorder: '#FFCDD0',
 
-  moderate: '#f5a623',
-  moderateBg: '#2a1f0a',
+  high: '#FF6B30',          // iOS orange-red blend
+  highBg: '#FFF4EE',
 
-  low: '#30d158',
-  lowBg: '#0a2a14',
+  moderate: '#FF9F0A',      // iOS orange/amber
+  moderateBg: '#FFF8EC',
 
-  // Keep elevated/normal as aliases for compatibility
-  elevated: '#f5a623',
-  elevatedBg: '#2a1f0a',
-  normal: '#30d158',
-  normalBg: '#0a2a14',
+  low: '#34C759',           // iOS green
+  lowBg: '#EDFAF1',
 
-  textPrimary: '#f0f4f8',
-  textSecondary: '#8a9ab0',
-  textMuted: '#4a5568',
+  // ── Compatibility aliases ──────────────────────
+  elevated: '#FF9F0A',
+  elevatedBg: '#FFF8EC',
+  normal: '#34C759',
+  normalBg: '#EDFAF1',
 
-  accent: '#E96D3F',
-  accentBlue: '#4da6ff',
+  // ── Typography ────────────────────────────────
+  textPrimary: '#000000',   // iOS label
+  textSecondary: '#3C3C43', // iOS secondary label
+  textMuted: '#8E8E93',     // iOS tertiary label / placeholder
 
-  tempColor: '#ff6b6b',
-  humidityColor: '#4da6ff',
-  vocColor: '#f5a623',
-  aqiColor: '#a78bfa',
+  // ── Accent ────────────────────────────────────
+  accent: '#007AFF',        // iOS blue
+  accentBlue: '#5AC8FA',    // iOS light blue
+
+  // ── Sensor-specific ───────────────────────────
+  tempColor: '#FF3B30',     // red — heat
+  humidityColor: '#5AC8FA', // light blue — water
+  vocColor: '#FF9F0A',      // amber — chemical
+  aqiColor: '#AF52DE',      // iOS purple — air quality
 };
 
 export const spacing = {
