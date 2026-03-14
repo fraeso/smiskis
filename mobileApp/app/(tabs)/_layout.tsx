@@ -31,7 +31,7 @@ export default function TabLayout() {
         name="dashboard"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'pulse' : 'pulse-outline'} label="Home" focused={focused} />
+            <TabIcon name={focused ? 'home' : 'home-outline'} label="Home" focused={focused} />
           ),
         }}
       />

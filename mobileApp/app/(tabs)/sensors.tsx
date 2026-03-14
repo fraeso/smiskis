@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, TextIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { sensors, SensorReading } from '../../constants/dummy-data';
+import { useSensors, SensorReading } from '../../services/sensor-context';
 import { colors, spacing, radius, font } from '../../constants/theme';
 
 type RiskFilter = 'all' | 'critical' | 'high' | 'moderate' | 'low';
@@ -24,9 +24,12 @@ const riskBg: Record<string, string> = {
 };
 
 export default function SensorsScreen() {
+  const { sensors, loading } = useSensors();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<RiskFilter>('all');
   const [sort, setSort] = useState<SortKey>('aqi');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const filtered = sensors
     .filter(s => filter === 'all' || s.riskLevel === filter)
@@ -41,6 +44,14 @@ export default function SensorsScreen() {
       if (sort === 'temperature') return b.readings.temperature - a.readings.temperature;
       return 0;
     });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset to page 1 when search/filter/sort changes
+  const handleSearch = (v: string) => { setSearch(v); setPage(1); };
+  const handleFilter = (f: RiskFilter) => { setFilter(f); setPage(1); };
+  const handleSort = (s: SortKey) => { setSort(s); setPage(1); };
 
   const navigateToSensor = (sensor: SensorReading) => {
     router.navigate({
@@ -63,7 +74,7 @@ export default function SensorsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.title}>Sensors</Text>
-        <Text style={styles.subtitle}>{sensors.length} monitoring stations across Victoria</Text>
+        <Text style={styles.subtitle}>{loading ? 'Loading...' : `${sensors.length} monitoring stations`}</Text>
 
         {/* Search */}
         <View style={styles.searchRow}>
@@ -73,7 +84,7 @@ export default function SensorsScreen() {
             placeholder="Search by name, location or ID..."
             placeholderTextColor={colors.textMuted}
             value={search}
-            onChangeText={setSearch}
+            onChangeText={handleSearch}
             clearButtonMode="while-editing"
           />
         </View>
@@ -88,7 +99,7 @@ export default function SensorsScreen() {
                 filter === f && styles.filterPillActive,
                 filter === f && f !== 'all' && { backgroundColor: riskBg[f], borderColor: riskColor[f] },
               ]}
-              onPress={() => setFilter(f)}
+              onPress={() => handleFilter(f)}
             >
               <Text style={[
                 styles.filterText,
@@ -108,7 +119,7 @@ export default function SensorsScreen() {
             <TouchableOpacity
               key={s}
               style={[styles.sortBtn, sort === s && styles.sortBtnActive]}
-              onPress={() => setSort(s)}
+              onPress={() => handleSort(s)}
             >
               <Text style={[styles.sortText, sort === s && styles.sortTextActive]}>
                 {s === 'aqi' ? 'AQI' : s === 'temperature' ? 'Temp' : 'Name'}
@@ -119,7 +130,7 @@ export default function SensorsScreen() {
         </View>
 
         {/* Sensor list */}
-        {filtered.map((sensor) => (
+        {paginated.map((sensor) => (
           <TouchableOpacity
             key={sensor.sensorId}
             style={styles.sensorCard}
@@ -168,6 +179,35 @@ export default function SensorsScreen() {
             <Text style={styles.emptyText}>No sensors match your search</Text>
           </View>
         )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <View style={styles.pagination}>
+            <TouchableOpacity
+              style={[styles.pageBtn, page === 1 && styles.pageBtnDisabled]}
+              onPress={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <Ionicons name="chevron-back" size={16} color={page === 1 ? colors.textMuted : colors.textPrimary} />
+            </TouchableOpacity>
+
+            <View style={styles.pageInfo}>
+              <Text style={styles.pageText}>
+                <Text style={styles.pageTextBold}>{page}</Text>
+                <Text style={styles.pageTextMuted}> / {totalPages}</Text>
+              </Text>
+              <Text style={styles.pageCount}>{filtered.length} total</Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.pageBtn, page === totalPages && styles.pageBtnDisabled]}
+              onPress={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              <Ionicons name="chevron-forward" size={16} color={page === totalPages ? colors.textMuted : colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -210,4 +250,12 @@ const styles = StyleSheet.create({
   timestamp: { color: colors.textMuted, fontSize: font.xs },
   empty: { alignItems: 'center', paddingVertical: spacing.xxl * 2, gap: spacing.md },
   emptyText: { color: colors.textMuted, fontSize: font.md },
+  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.lg, marginTop: spacing.sm },
+  pageBtn: { width: 40, height: 40, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard, alignItems: 'center', justifyContent: 'center' },
+  pageBtnDisabled: { opacity: 0.3 },
+  pageInfo: { alignItems: 'center', gap: 2 },
+  pageText: { fontSize: font.md },
+  pageTextBold: { color: colors.textPrimary, fontWeight: '700' },
+  pageTextMuted: { color: colors.textMuted },
+  pageCount: { color: colors.textMuted, fontSize: font.xs },
 });
