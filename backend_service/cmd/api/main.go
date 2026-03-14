@@ -6,6 +6,10 @@ import (
 
 	"github.com/fraeso/smiskis/database"
 	_ "github.com/joho/godotenv/autoload"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
@@ -21,6 +25,13 @@ func main() {
 	}
 
 	// TODO: try to migrate db based on migration files
+	m, err := migrate.New("file://migrations", dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := m.Up(); err != nil {
+		log.Fatal(err)
+	}
 	// TODO: run goroutine to continuously simulate/generate and write to db
 	// TODO: start ws server for alerts
 }
