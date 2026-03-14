@@ -1,27 +1,26 @@
 import React, { useState } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, StatusBar, TextInput,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { sensors, SensorReading } from '../../constants/dummy-data';
 import { colors, spacing, radius, font } from '../../constants/theme';
 
-type RiskFilter = 'all' | 'critical' | 'elevated' | 'normal';
+type RiskFilter = 'all' | 'critical' | 'high' | 'moderate' | 'low';
 type SortKey = 'name' | 'aqi' | 'temperature';
 
-const riskColor = {
+const riskColor: Record<string, string> = {
   critical: colors.critical,
-  elevated: colors.elevated,
-  normal: colors.normal,
+  high: colors.high,
+  moderate: colors.moderate,
+  low: colors.low,
 };
 
-const riskBg = {
+const riskBg: Record<string, string> = {
   critical: colors.criticalBg,
-  elevated: colors.elevatedBg,
-  normal: colors.normalBg,
+  high: colors.highBg,
+  moderate: colors.moderateBg,
+  low: colors.lowBg,
 };
 
 export default function SensorsScreen() {
@@ -63,7 +62,6 @@ export default function SensorsScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
         <Text style={styles.title}>Sensors</Text>
         <Text style={styles.subtitle}>{sensors.length} monitoring stations across Victoria</Text>
 
@@ -82,7 +80,7 @@ export default function SensorsScreen() {
 
         {/* Risk filter pills */}
         <View style={styles.filters}>
-          {(['all', 'critical', 'elevated', 'normal'] as RiskFilter[]).map((f) => (
+          {(['all', 'critical', 'high', 'moderate', 'low'] as RiskFilter[]).map((f) => (
             <TouchableOpacity
               key={f}
               style={[
@@ -147,7 +145,7 @@ export default function SensorsScreen() {
                 { icon: 'thermometer' as const, value: `${sensor.readings.temperature}°C`, color: colors.tempColor },
                 { icon: 'water' as const, value: `${sensor.readings.humidity}%`, color: colors.humidityColor },
                 { icon: 'cloud' as const, value: `${sensor.readings.vocLevel} ppb`, color: colors.vocColor },
-                { icon: 'warning' as const, value: `AQI ${sensor.readings.airQualityIndex}`, color: sensor.readings.airQualityIndex > 150 ? colors.critical : sensor.readings.airQualityIndex > 80 ? colors.elevated : colors.normal },
+                { icon: 'warning' as const, value: `AQI ${sensor.readings.airQualityIndex}`, color: riskColor[sensor.riskLevel] },
               ].map((r) => (
                 <View key={r.icon} style={styles.reading}>
                   <Ionicons name={r.icon} size={12} color={r.color} />

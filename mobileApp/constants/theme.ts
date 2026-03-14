@@ -5,13 +5,23 @@ export const colors = {
   border: '#1e2328',
   borderLight: '#252b33',
 
+  // 4 risk levels
   critical: '#ff3b3b',
   criticalBg: '#2a0f0f',
   criticalBorder: '#4a1515',
 
+  high: '#ff6b35',
+  highBg: '#2a1508',
+
+  moderate: '#f5a623',
+  moderateBg: '#2a1f0a',
+
+  low: '#30d158',
+  lowBg: '#0a2a14',
+
+  // Keep elevated/normal as aliases for compatibility
   elevated: '#f5a623',
   elevatedBg: '#2a1f0a',
-
   normal: '#30d158',
   normalBg: '#0a2a14',
 

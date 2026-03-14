@@ -61,7 +61,7 @@ const pointGeoJSON: GeoJSON.FeatureCollection = {
       humidity: s.readings.humidity,
       vocLevel: s.readings.vocLevel,
       aqi: s.readings.airQualityIndex,
-      heatmapWeight: s.riskLevel === 'normal' ? 0 : tempToWeight(s.readings.temperature),
+      heatmapWeight: s.riskLevel === 'low' ? 0 : tempToWeight(s.readings.temperature),
       heatmapRadius: Math.round(20 + (Math.min(s.readings.airQualityIndex, 500) / 500) * 100),
       zoneRadius: aqiToBaseRadius(s.readings.airQualityIndex),
     },
@@ -70,17 +70,38 @@ const pointGeoJSON: GeoJSON.FeatureCollection = {
 
 const riskColorMap: Record<string, string> = {
   critical: colors.critical,
-  elevated: colors.elevated,
-  normal: colors.normal,
+  high: colors.high,
+  moderate: colors.moderate,
+  low: colors.low,
 };
 
-type ViewMode = 'heatmap' | 'zones' | 'clean';
+type DotColorMode = 'risk' | 'temperature' | 'humidity' | 'voc' | 'aqi';
+
+// Map a reading value to a colour on a gradient
+const valueToColor = (value: number, min: number, max: number): string => {
+  const t = Math.min(Math.max((value - min) / (max - min), 0), 1);
+  if (t < 0.33) return colors.low;
+  if (t < 0.66) return colors.moderate;
+  if (t < 0.85) return colors.high;
+  return colors.critical;
+};
+
+const getDotColor = (sensor: typeof sensors[0], mode: DotColorMode): string => {
+  switch (mode) {
+    case 'temperature': return valueToColor(sensor.readings.temperature, 15, 45);
+    case 'humidity': return valueToColor(100 - sensor.readings.humidity, 20, 80); // invert — low humidity = high risk
+    case 'voc': return valueToColor(sensor.readings.vocLevel, 50, 700);
+    case 'aqi': return valueToColor(sensor.readings.airQualityIndex, 0, 300);
+    default: return riskColorMap[sensor.riskLevel] ?? colors.low;
+  }
+};
 type SelectedSensor = typeof sensors[0] | null;
 
 export default function MapScreen() {
   const [selectedSensor, setSelectedSensor] = useState<SelectedSensor>(null);
   const [showHeat, setShowHeat] = useState(false);
   const [showZones, setShowZones] = useState(false);
+  const [dotColorMode, setDotColorMode] = useState<DotColorMode>('risk');
   const params = useLocalSearchParams<{ sensorId?: string; lat?: string; lng?: string }>();
   const cameraRef = useRef<MapboxGL.Camera>(null);
   const calloutAnim = useRef(new Animated.Value(0)).current;
@@ -95,8 +116,18 @@ export default function MapScreen() {
     }).start();
   }, [selectedSensor]);
 
-  // Build selected sensor GeoJSON for highlight ring — kept for future use
-  const _selectedGeoJSON = selectedSensor;
+  // Rebuild dot GeoJSON when colour mode changes — adds dotColor per feature
+  const coloredPointGeoJSON: GeoJSON.FeatureCollection = {
+    type: 'FeatureCollection',
+    features: sensors.map((s) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [s.location.lng, s.location.lat] },
+      properties: {
+        ...pointGeoJSON.features.find(f => f.properties?.sensorId === s.sensorId)?.properties,
+        dotColor: getDotColor(s, dotColorMode),
+      },
+    })),
+  };
 
   // Fly to sensor if navigated from Sensors page
   useEffect(() => {
@@ -143,8 +174,6 @@ export default function MapScreen() {
           <Text style={styles.title}>Risk Map</Text>
           <Text style={styles.subtitle}>Regional Victoria, Australia</Text>
         </View>
-
-        {/* Mode toggle */}
         <View style={styles.segmented}>
           <TouchableOpacity
             style={[styles.segBtn, showHeat && styles.segBtnActive]}
@@ -161,6 +190,27 @@ export default function MapScreen() {
             <Text style={[styles.segText, showZones && styles.segTextActive]}>Zones</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Dot colour filter */}
+      <View style={styles.colorFilterRow}>
+        {([
+          { mode: 'risk' as DotColorMode, label: 'Risk' },
+          { mode: 'temperature' as DotColorMode, label: 'Temp' },
+          { mode: 'humidity' as DotColorMode, label: 'Humidity' },
+          { mode: 'voc' as DotColorMode, label: 'VOC' },
+          { mode: 'aqi' as DotColorMode, label: 'AQI' },
+        ]).map((item) => (
+          <TouchableOpacity
+            key={item.mode}
+            style={[styles.colorFilterBtn, dotColorMode === item.mode && styles.colorFilterBtnActive]}
+            onPress={() => setDotColorMode(item.mode)}
+          >
+            <Text style={[styles.colorFilterText, dotColorMode === item.mode && styles.colorFilterTextActive]}>
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <View style={styles.mapContainer}>
@@ -216,12 +266,14 @@ export default function MapScreen() {
                 style={{
                   fillColor: ['match', ['get', 'riskLevel'],
                     'critical', colors.critical,
-                    'elevated', colors.elevated,
-                    colors.normal,
+                    'high', colors.high,
+                    'moderate', colors.moderate,
+                    colors.low,
                   ] as any,
                   fillOpacity: ['match', ['get', 'riskLevel'],
                     'critical', showHeat ? 0.06 : 0.18,
-                    'elevated', showHeat ? 0.04 : 0.12,
+                    'high', showHeat ? 0.05 : 0.15,
+                    'moderate', showHeat ? 0.04 : 0.12,
                     showHeat ? 0.02 : 0.08,
                   ] as any,
                 }}
@@ -232,13 +284,15 @@ export default function MapScreen() {
                 style={{
                   lineColor: ['match', ['get', 'riskLevel'],
                     'critical', colors.critical,
-                    'elevated', colors.elevated,
-                    colors.normal,
+                    'high', colors.high,
+                    'moderate', colors.moderate,
+                    colors.low,
                   ] as any,
                   lineWidth: 1,
                   lineOpacity: ['match', ['get', 'riskLevel'],
                     'critical', showHeat ? 0.3 : 0.55,
-                    'elevated', showHeat ? 0.2 : 0.4,
+                    'high', showHeat ? 0.25 : 0.45,
+                    'moderate', showHeat ? 0.2 : 0.4,
                     showHeat ? 0.12 : 0.25,
                   ] as any,
                   lineDasharray: [3, 2] as any,
@@ -248,8 +302,7 @@ export default function MapScreen() {
           )}
 
           {/* ── SENSOR DOTS — always visible ── */}
-          <MapboxGL.ShapeSource id="sensors-source" shape={pointGeoJSON} onPress={handleSensorPress}>
-            {/* White ring for selected sensor — rendered at map level so it aligns correctly */}
+          <MapboxGL.ShapeSource id="sensors-source" shape={coloredPointGeoJSON} onPress={handleSensorPress}>
             <MapboxGL.CircleLayer
               id="sensors-selected-ring"
               sourceID="sensors-source"
@@ -267,11 +320,7 @@ export default function MapScreen() {
               sourceID="sensors-source"
               style={{
                 circleRadius: 6,
-                circleColor: ['match', ['get', 'riskLevel'],
-                  'critical', colors.critical,
-                  'elevated', colors.elevated,
-                  colors.normal,
-                ] as any,
+                circleColor: ['get', 'dotColor'] as any,
                 circleOpacity: 1,
                 circleStrokeWidth: 2,
                 circleStrokeColor: '#0a0c0f',
@@ -284,12 +333,18 @@ export default function MapScreen() {
 
         {/* Legend */}
         <View style={styles.legend}>
-          <Text style={styles.legendTitle}>RISK LEVEL</Text>
-          {[
-            { label: 'Possible Ignition', color: colors.critical },
-            { label: 'Elevated Risk', color: colors.elevated },
-            { label: 'Normal', color: colors.normal },
-          ].map((item) => (
+          <Text style={styles.legendTitle}>{dotColorMode === 'risk' ? 'RISK LEVEL' : dotColorMode.toUpperCase()}</Text>
+          {(dotColorMode === 'risk' ? [
+            { label: 'Critical', color: colors.critical },
+            { label: 'High', color: colors.high },
+            { label: 'Moderate', color: colors.moderate },
+            { label: 'Low', color: colors.low },
+          ] : [
+            { label: 'Critical', color: colors.critical },
+            { label: 'High', color: colors.high },
+            { label: 'Moderate', color: colors.moderate },
+            { label: 'Low', color: colors.low },
+          ]).map((item) => (
             <View key={item.label} style={styles.legendRow}>
               <View style={[styles.legendDot, { backgroundColor: item.color }]} />
               <Text style={[styles.legendLabel, { color: item.color }]}>{item.label}</Text>
@@ -328,7 +383,7 @@ export default function MapScreen() {
                 { label: 'Temp', value: `${selectedSensor.readings.temperature}°C`, color: colors.tempColor },
                 { label: 'Humidity', value: `${selectedSensor.readings.humidity}%`, color: colors.humidityColor },
                 { label: 'VOC', value: `${selectedSensor.readings.vocLevel} ppb`, color: colors.vocColor },
-                { label: 'AQI', value: `${selectedSensor.readings.airQualityIndex}`, color: selectedSensor.riskLevel === 'critical' ? colors.critical : selectedSensor.riskLevel === 'elevated' ? colors.elevated : colors.normal },
+                { label: 'AQI', value: `${selectedSensor.readings.airQualityIndex}`, color: riskColorMap[selectedSensor.riskLevel] ?? colors.low },
               ].map((stat) => (
                 <View key={stat.label} style={styles.calloutStat}>
                   <Text style={[styles.calloutStatValue, { color: stat.color }]}>{stat.value}</Text>
@@ -353,6 +408,11 @@ const styles = StyleSheet.create({
   segBtnActive: { backgroundColor: colors.bgCardAlt, borderColor: colors.accent },
   segText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '600' },
   segTextActive: { color: colors.accent },
+  colorFilterRow: { flexDirection: 'row', paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: spacing.sm },
+  colorFilterBtn: { paddingHorizontal: spacing.md, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard },
+  colorFilterBtnActive: { borderColor: colors.accent, backgroundColor: colors.bgCardAlt },
+  colorFilterText: { color: colors.textMuted, fontSize: font.xs, fontWeight: '500' },
+  colorFilterTextActive: { color: colors.accent, fontWeight: '700' },
   mapContainer: { flex: 1, position: 'relative' },
   map: { flex: 1 },
   legend: { position: 'absolute', top: spacing.lg, right: spacing.lg, backgroundColor: 'rgba(17,20,24,0.93)', borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: spacing.sm },
