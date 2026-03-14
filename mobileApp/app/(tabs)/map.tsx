@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import MapboxGL from '@rnmapbox/maps';
-import { sensors } from '../../constants/dummy-data';
+import { useSensors, SensorReading } from '../../services/sensor-context';
 import { colors, font, spacing, radius } from '../../constants/theme';
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!;
@@ -17,56 +17,24 @@ const tempToWeight = (temp: number) => {
 };
 const aqiToBaseRadius = (aqi: number) => Math.round(8 + (Math.min(Math.max(aqi, 0), 500) / 500) * 42);
 
-// ─── GeoJSON: polygon zones (organic, AQI-sized) ─────────────
+// ─── GeoJSON builders (now functions, called with live data) ──
 const KM_LAT = 1 / 110.574;
-const KM_LNG = 1 / (111.32 * Math.cos((37.5 * Math.PI) / 180));
 
 const organicPolygon = (lat: number, lng: number, km: number, id: string, pts = 32): number[][] => {
+  const latKm = KM_LAT;
+  const lngKm = 1 / (111.32 * Math.cos((lat * Math.PI) / 180)); // use actual lat for accuracy
   const seed = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const rng = (i: number) => { const x = Math.sin(seed * 9301 + i * 49297) * 233280; return x - Math.floor(x); };
   const coords = Array.from({ length: pts }, (_, i) => {
     const angle = (i / pts) * 2 * Math.PI;
     const r = km * (0.75 + rng(i) * 0.5);
-    return [lng + r * Math.sin(angle) * KM_LNG, lat + r * Math.cos(angle) * KM_LAT];
+    return [lng + r * Math.sin(angle) * lngKm, lat + r * Math.cos(angle) * latKm];
   });
   coords.push(coords[0]);
   return coords;
 };
 
 const aqiToKm = (aqi: number) => 1 + (Math.min(Math.max(aqi, 0), 500) / 500) * 24;
-
-const zoneGeoJSON: GeoJSON.FeatureCollection = {
-  type: 'FeatureCollection',
-  features: sensors.map((s) => ({
-    type: 'Feature',
-    geometry: {
-      type: 'Polygon',
-      coordinates: [organicPolygon(s.location.lat, s.location.lng, aqiToKm(s.readings.airQualityIndex), s.sensorId)],
-    },
-    properties: { sensorId: s.sensorId, riskLevel: s.riskLevel, aqi: s.readings.airQualityIndex },
-  })),
-};
-
-// ─── GeoJSON: point data (heatmap + dots) ────────────────────
-const pointGeoJSON: GeoJSON.FeatureCollection = {
-  type: 'FeatureCollection',
-  features: sensors.map((s) => ({
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: [s.location.lng, s.location.lat] },
-    properties: {
-      sensorId: s.sensorId,
-      name: s.location.name,
-      riskLevel: s.riskLevel,
-      temperature: s.readings.temperature,
-      humidity: s.readings.humidity,
-      vocLevel: s.readings.vocLevel,
-      aqi: s.readings.airQualityIndex,
-      heatmapWeight: s.riskLevel === 'low' ? 0 : tempToWeight(s.readings.temperature),
-      heatmapRadius: Math.round(20 + (Math.min(s.readings.airQualityIndex, 500) / 500) * 100),
-      zoneRadius: aqiToBaseRadius(s.readings.airQualityIndex),
-    },
-  })),
-};
 
 const riskColorMap: Record<string, string> = {
   critical: colors.critical,
@@ -86,18 +54,20 @@ const valueToColor = (value: number, min: number, max: number): string => {
   return colors.critical;
 };
 
-const getDotColor = (sensor: typeof sensors[0], mode: DotColorMode): string => {
+const getDotColor = (sensor: SensorReading, mode: DotColorMode): string => {
   switch (mode) {
     case 'temperature': return valueToColor(sensor.readings.temperature, 15, 45);
-    case 'humidity': return valueToColor(100 - sensor.readings.humidity, 20, 80); // invert — low humidity = high risk
+    case 'humidity': return valueToColor(100 - sensor.readings.humidity, 20, 80);
     case 'voc': return valueToColor(sensor.readings.vocLevel, 50, 700);
     case 'aqi': return valueToColor(sensor.readings.airQualityIndex, 0, 300);
     default: return riskColorMap[sensor.riskLevel] ?? colors.low;
   }
 };
-type SelectedSensor = typeof sensors[0] | null;
+
+type SelectedSensor = SensorReading | null;
 
 export default function MapScreen() {
+  const { sensors, loading } = useSensors();
   const [selectedSensor, setSelectedSensor] = useState<SelectedSensor>(null);
   const [showHeat, setShowHeat] = useState(false);
   const [showZones, setShowZones] = useState(false);
@@ -105,6 +75,59 @@ export default function MapScreen() {
   const params = useLocalSearchParams<{ sensorId?: string; lat?: string; lng?: string }>();
   const cameraRef = useRef<MapboxGL.Camera>(null);
   const calloutAnim = useRef(new Animated.Value(0)).current;
+  const hasFitBounds = useRef(false);
+
+  // Auto-fit camera to sensor bounds once data loads
+  useEffect(() => {
+    if (sensors.length === 0 || hasFitBounds.current) return;
+    const lats = sensors.map(s => s.location.lat);
+    const lngs = sensors.map(s => s.location.lng);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const pad = 0.5;
+    cameraRef.current?.fitBounds(
+      [maxLng + pad, maxLat + pad],
+      [minLng - pad, minLat - pad],
+      100,
+      800,
+    );
+    hasFitBounds.current = true;
+  }, [sensors]);
+
+  // Build GeoJSON from live sensor data
+  const pointGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => ({
+    type: 'FeatureCollection',
+    features: sensors.map((s) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [s.location.lng, s.location.lat] },
+      properties: {
+        sensorId: s.sensorId,
+        name: s.location.name,
+        riskLevel: s.riskLevel,
+        temperature: s.readings.temperature,
+        humidity: s.readings.humidity,
+        vocLevel: s.readings.vocLevel,
+        aqi: s.readings.airQualityIndex,
+        heatmapWeight: s.riskLevel === 'low' ? 0 : tempToWeight(s.readings.temperature),
+        heatmapRadius: Math.round(20 + (Math.min(s.readings.airQualityIndex, 500) / 500) * 100),
+        zoneRadius: aqiToBaseRadius(s.readings.airQualityIndex),
+      },
+    })),
+  }), [sensors]);
+
+  const zoneGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => ({
+    type: 'FeatureCollection',
+    features: sensors.map((s) => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [organicPolygon(s.location.lat, s.location.lng, aqiToKm(s.readings.airQualityIndex), s.sensorId)],
+      },
+      properties: { sensorId: s.sensorId, riskLevel: s.riskLevel, aqi: s.readings.airQualityIndex },
+    })),
+  }), [sensors]);
 
   // Animate callout in/out
   useEffect(() => {
@@ -148,12 +171,14 @@ export default function MapScreen() {
   }, [params.sensorId]);
 
   const resetCamera = () => {
-    cameraRef.current?.setCamera({
-      centerCoordinate: [145.0, -37.5],
-      zoomLevel: 6,
-      animationDuration: 800,
-      animationMode: 'flyTo',
-    });
+    if (sensors.length === 0) return;
+    const lats = sensors.map(s => s.location.lat);
+    const lngs = sensors.map(s => s.location.lng);
+    cameraRef.current?.fitBounds(
+      [Math.max(...lngs) + 0.5, Math.max(...lats) + 0.5],
+      [Math.min(...lngs) - 0.5, Math.min(...lats) - 0.5],
+      100, 800,
+    );
     setSelectedSensor(null);
   };
 
@@ -172,7 +197,7 @@ export default function MapScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Risk Map</Text>
-          <Text style={styles.subtitle}>Regional Victoria, Australia</Text>
+          <Text style={styles.subtitle}>{loading ? 'Loading sensors...' : `${sensors.length} sensors across Australia`}</Text>
         </View>
         <View style={styles.segmented}>
           <TouchableOpacity
@@ -223,10 +248,10 @@ export default function MapScreen() {
         >
           <MapboxGL.Camera
             ref={cameraRef}
-            zoomLevel={6}
-            centerCoordinate={[145.0, -37.5]}
+            zoomLevel={4}
+            centerCoordinate={[134.0, -25.0]}
             animationMode="flyTo"
-            animationDuration={1500}
+            animationDuration={0}
           />
 
           {/* ── HEATMAP MODE ── */}
@@ -352,7 +377,6 @@ export default function MapScreen() {
           ))}
         </View>
 
-        {/* Sensor count — tap to zoom out */}
         <TouchableOpacity style={styles.sensorPill} onPress={resetCamera}>
           <Ionicons name="locate" size={12} color={colors.textSecondary} />
           <Text style={styles.sensorPillText}>{sensors.length} Sensors Active</Text>

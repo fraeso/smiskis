@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Image, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,8 @@ import { LineChart } from 'react-native-gifted-charts';
 import AlertBanner from '../../components/alert-banner';
 import NetworkOverview from '../../components/network-overview';
 import StatCard from '../../components/stat-card';
-import { activeAlert, networkStats, environmentalStats, sensors, Alert } from '../../constants/dummy-data';
+import { activeAlert, Alert } from '../../constants/dummy-data';
+import { useSensors } from '../../services/sensor-context';
 import { colors, spacing, radius, font } from '../../constants/theme';
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!;
@@ -23,14 +24,6 @@ const riskColor: Record<string, string> = {
   normal: colors.normal,
 };
 
-const dashSensorGeoJSON: GeoJSON.FeatureCollection = {
-  type: 'FeatureCollection',
-  features: sensors.map((sensor) => ({
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: [sensor.location.lng, sensor.location.lat] },
-    properties: { riskLevel: sensor.riskLevel },
-  })),
-};
 
 // Generate 24hr trend data in gifted-charts format
 const generateTrend = (base: number, variance: number, points = 24) =>
@@ -40,15 +33,8 @@ const generateTrend = (base: number, variance: number, points = 24) =>
     labelTextStyle: { color: colors.textMuted, fontSize: 9 },
   }));
 
-const trendData = {
-  temperature: generateTrend(environmentalStats.avgTemp, 6),
-  humidity: generateTrend(environmentalStats.avgHumidity, 10),
-  voc: generateTrend(220, 80),
-  aqi: generateTrend(95, 40),
-};
-
 type ChartConfig = {
-  key: keyof typeof trendData;
+  key: 'temperature' | 'humidity' | 'voc' | 'aqi';
   label: string;
   unit: string;
   color: string;
@@ -61,8 +47,7 @@ const charts: ChartConfig[] = [
   { key: 'aqi', label: 'AIR QUALITY INDEX', unit: 'AQI', color: colors.aqiColor },
 ];
 
-function TrendChart({ config }: { config: ChartConfig }) {
-  const data = trendData[config.key];
+function TrendChart({ config, data }: { config: ChartConfig; data: { value: number; label: string; labelTextStyle: any }[] }) {
   const latest = data[data.length - 1]?.value ?? 0;
   const max = Math.max(...data.map(d => d.value));
   const min = Math.min(...data.map(d => d.value));
@@ -131,7 +116,24 @@ function TrendChart({ config }: { config: ChartConfig }) {
 }
 
 export default function DashboardScreen() {
+  const { sensors, networkStats, environmentalStats, loading } = useSensors();
   const [alert, setAlert] = useState<Alert | null>(activeAlert);
+
+  const trendData = useMemo(() => ({
+    temperature: generateTrend(environmentalStats.avgTemp || 30, 6),
+    humidity: generateTrend(environmentalStats.avgHumidity || 40, 10),
+    voc: generateTrend(220, 80),
+    aqi: generateTrend(95, 40),
+  }), [environmentalStats.avgTemp, environmentalStats.avgHumidity]);
+
+  const dashSensorGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => ({
+    type: 'FeatureCollection',
+    features: sensors.map((s) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [s.location.lng, s.location.lat] },
+      properties: { riskLevel: s.riskLevel },
+    })),
+  }), [sensors]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -206,7 +208,7 @@ export default function DashboardScreen() {
         </View>
 
         {charts.map((chart) => (
-          <TrendChart key={chart.key} config={chart} />
+          <TrendChart key={chart.key} config={chart} data={trendData[chart.key]} />
         ))}
 
       </ScrollView>
