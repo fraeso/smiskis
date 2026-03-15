@@ -66,7 +66,7 @@ async function showLocalNotification(alert: Alert) {
 const AlertsContext = createContext<AlertsContextType>({
   alerts: [],
   connected: false,
-  clearAlert: () => {},
+  clearAlert: () => { },
 });
 
 export function AlertsProvider({ children }: { children: React.ReactNode }) {
