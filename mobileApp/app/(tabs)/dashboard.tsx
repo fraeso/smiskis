@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -160,7 +160,13 @@ export default function DashboardScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>AeroSafe</Text>
+          {/* <Text style={styles.headerTitle}>AeroSafe</Text> */}
+          {/* <Image source={require('../../assets/images/a-full.png')} style={{ width: 170, height: 170 }} /> */}
+          <Image 
+            source={require('../../assets/images/a-full.png')} 
+            style={{ width: 160, height: 160, margin: -30, marginBottom: -75, marginTop: -60 }} 
+            resizeMode="contain"
+          />
           {/* <TouchableOpacity style={styles.liveIndicator}>
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>Live</Text>

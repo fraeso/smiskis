@@ -10,9 +10,9 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.content}>
         {/* Icon container with gradient background */}
-        <View style={styles.iconContainer}>
-          <Image source={require('../assets/images/react-logo.png')} style={{ width: 40, height: 40 }} />
-        </View>
+        {/* <View style={styles.iconContainer}> */}
+        <Image source={require('../assets/images/a-logo.png')} style={{ width: 80, height: 80 }} />
+        {/* </View> */}
 
         {/* App branding */}
         <View style={styles.brandingContainer}>
@@ -67,9 +67,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
-  iconContainer: {
-    marginBottom: spacing.xxxl,
-  },
+  // iconContainer: {
+  //   marginBottom: spacing.xl,
+  // },
   iconGradient: {
     width: 120,
     height: 120,
